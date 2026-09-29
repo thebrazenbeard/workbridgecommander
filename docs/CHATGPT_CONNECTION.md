@@ -18,3 +18,14 @@ A deployment is not ready merely because source CI is green. Verify the deployed
 Source CI uses the official MCP TypeScript client against the ingress/device boundary. Windows qualification additionally builds the exact pinned DesktopCommander payload and sends MCP initialize/tools-list through the bridge.
 
 No repository file proves deployment, tunnel activation, workspace publication, or live workstation effects.
+
+## Plugin authentication boundary
+
+The plugin package must not embed `WORKBRIDGE_CLIENT_TOKEN` or any other bearer secret. The current Commander service's static bearer token is suitable for source qualification and controlled service-to-service testing, but it is not a distributable ChatGPT plugin credential.
+
+For a live ChatGPT connection, use one of two reviewed shapes:
+
+1. a supported private MCP tunnel from ChatGPT to a private Commander service; or
+2. a remote HTTPS Commander endpoint with a ChatGPT-supported authentication mechanism such as OAuth.
+
+The repository must keep the MCP URL placeholder until one of those routes is actually deployed and verified. Replacing the placeholder is an activation effect, not a documentation edit.
