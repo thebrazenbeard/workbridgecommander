@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "status": "IMPLEMENTATION_ACCEPTANCE_TARGET",
+  "source_binding": {
+    "workbridge_mcp_head_observed": "8707a2e1eaf7de5ce2316567b5e6f1e805c0537b",
+    "desktop_commander_semantics": "UPSTREAM_EXACT_VIA_WORKBRIDGE_QUALIFIED_DUPLICATE"
+  },
+  "requirements": [
+    {"id":"WBC-01","requirement":"Remote ingress rejects unauthenticated MCP requests.","automated":true},
+    {"id":"WBC-02","requirement":"Device bridge rejects unauthenticated device registration.","automated":true},
+    {"id":"WBC-03","requirement":"A connected device is selected explicitly or by configured default.","automated":false},
+    {"id":"WBC-04","requirement":"At most four workstation-effect requests execute concurrently per device.","automated":true},
+    {"id":"WBC-05","requirement":"Execution-lane concurrency is demonstrated against a real WorkBridge-qualified DesktopCommander payload, not inferred from a queue unit test.","automated":false},
+    {"id":"WBC-06","requirement":"Up to 32 independently identified logic work contexts may be active; logic identity is distinct from effect authority.","automated":true},
+    {"id":"WBC-07","requirement":"A logic lane must bind an explicit device before workstation effect dispatch.","automated":true},
+    {"id":"WBC-08","requirement":"Concurrent client JSON-RPC IDs cannot collide inside the workstation bridge.","automated":true},
+    {"id":"WBC-09","requirement":"Packaged Node and DesktopCommander entrypoint hashes are checked before process launch.","automated":true},
+    {"id":"WBC-10","requirement":"The WorkBridge manifest is authenticated against trusted provenance rather than trusted solely because it is local.","automated":false},
+    {"id":"WBC-11","requirement":"Disconnect rejects in-flight requests and reconnect does not silently replay them.","automated":false},
+    {"id":"WBC-12","requirement":"Real MCP initialize/tools-list/call round trip succeeds through remote ingress and device bridge.","automated":false},
+    {"id":"WBC-13","requirement":"Windows device-agent operation is exercised on CI or equivalent clean Windows runner.","automated":false},
+    {"id":"WBC-14","requirement":"Production endpoint, OAuth/device pairing, deployment, and activation remain separate effect claims.","automated":false}
+  ]
+}
