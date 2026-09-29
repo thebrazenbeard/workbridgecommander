@@ -2,7 +2,7 @@
 
 **Remote workstation control for AI clients, built on the WorkBridge stack.**
 
-WorkBridge Commander is the public plugin and connector surface for reaching a workstation through a remote MCP connection, with a product-level orchestration target of **4 parallel execution lanes and 32 parallel logic lanes**. It follows the same repository split used by Desktop Commander: the workstation implementation and packaging live in the implementation repository; this repository carries the remote-plugin manifests, architecture contract, setup guidance, security boundary, and provenance.
+WorkBridge Commander is the public plugin and connector surface for reaching a workstation through a remote MCP connection, with a product-level orchestration target of **at least 4 parallel execution lanes by qualification default and at least 32 parallel logic lanes by qualification default**. It follows the same repository split used by Desktop Commander: the workstation implementation and packaging live in the implementation repository; this repository carries the remote-plugin manifests, architecture contract, setup guidance, security boundary, and provenance.
 
 ## Architecture
 
@@ -82,3 +82,9 @@ On a workstation that already has the WorkBridge-qualified DesktopCommander dupl
 ```
 
 The device agent verifies the packaged Node and DesktopCommander entrypoint SHA-256 values from `workbridge-desktop-commander.manifest.json` before launching it.
+
+## Capacity model
+
+The values 4 execution lanes per device and 32 logic lanes are qualification floors and default capacities, not product ceilings. Operators can raise them with `WORKBRIDGE_EXECUTION_CAPACITY` and `WORKBRIDGE_LOGIC_CAPACITY`. The health response reports configured capacity and whether it meets the qualification floors. Lower values are permitted for constrained hosts but must report that they do not meet the standard qualification target.
+
+External donor research and the exact boundary between adopted patterns and runtime dependencies are recorded in `docs/EXTERNAL_DONOR_RESEARCH.md`.
