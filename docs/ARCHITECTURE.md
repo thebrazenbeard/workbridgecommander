@@ -4,14 +4,14 @@ Status: SOURCE DESIGN / REMOTE SERVICE NOT CLAIMED DEPLOYED
 
 ## Commander orchestration profile
 
-The repository description establishes the product-level concurrency target: **4 parallel execution lanes and 32 parallel logic lanes**.
+The repository description establishes a baseline concurrency target of **at least 4 parallel execution lanes per device and at least 32 parallel logic lanes**. These are qualification defaults/floors, not hard product maxima.
 
 These are separate layers:
 
-- **Execution lanes (4):** at most four concurrently active workstation-effect lanes. Each lane needs an explicit target device/session, operation identity, lifecycle state, and result/error channel. Concurrency does not imply shared shell state.
-- **Logic lanes (32):** up to 32 concurrent planning/reasoning/work-unit lanes above the effect boundary. Logic lanes may inspect, decompose, compare, or prepare work without automatically acquiring workstation execution authority.
+- **Execution lanes (default 4 per device):** the scheduler admits up to the configured per-device workstation-effect capacity; 4 is the qualification floor/default, and operators may raise it. Each lane needs an explicit target device/session, operation identity, lifecycle state, and result/error channel. Concurrency does not imply shared shell state.
+- **Logic lanes (default 32):** the scheduler admits up to the configured concurrent work-unit capacity; 32 is the qualification floor/default, and operators may raise it. Logic lanes may inspect, decompose, compare, or prepare work without automatically acquiring workstation execution authority.
 - **Effect gate:** a logic lane must bind to one of the four execution lanes before causing workstation effects. Queueing/scheduling must preserve target, ordering requirements, cancellation, and result provenance.
-- **No authority multiplication:** 32-way reasoning does not create 32-way workstation authority. The execution ceiling remains four unless the product contract is deliberately revised.
+- **No authority multiplication:** raising scheduling capacity does not create new workstation permissions. Authority remains whatever the authenticated workstation payload and operator have granted.
 
 The remote service/orchestrator owns lane scheduling. DesktopCommanderMCP remains the workstation MCP payload; WorkBridgeMCP remains its qualification/package authority. Lane orchestration must wrap calls without changing the underlying Desktop Commander tool schemas or semantics.
 
