@@ -64,8 +64,20 @@ function connect() {
   ws.on("message", raw => {
     const message = JSON.parse(raw.toString()) as Partial<DeviceRequest> & { type?: string };
     if (message.type === "request" && typeof message.requestId === "string" && message.payload) {
-      pendingOutbound.push({ ...message.payload, __workbridgeRequestId: message.requestId } as JsonRpc);
-      child.stdin.write(JSON.stringify(message.payload) + "\n");
+      if (message.payload.id === undefined) {
+        child.stdin.write(JSON.stringify(message.payload) + "\n");
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: "response",
+            requestId: message.requestId,
+            payload: { jsonrpc: "2.0", result: null }
+          }));
+        }
+        return;
+      }
+      const bridgeId = localId++;
+      pendingOutbound.set(bridgeId, { requestId: message.requestId, originalId: message.payload.id });
+      child.stdin.write(JSON.stringify({ ...message.payload, id: bridgeId }) + "\n");
     }
   });
 
