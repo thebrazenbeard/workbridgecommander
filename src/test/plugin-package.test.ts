@@ -9,7 +9,7 @@ test("plugin package is the initial WorkBridge Commander plugin and is intention
 
   assert.equal(plugin.$schema, "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json");
   assert.equal(plugin.name, "workbridge-commander");
-  assert.equal(plugin.version, "0.1.0");
+  assert.equal(plugin.version, "0.1.1");
   assert.equal(plugin.extensions?.["com.openai"]?.interface?.displayName, "WorkBridge Commander");
   assert.equal("mcpServers" in plugin, false);
 
