@@ -25,7 +25,7 @@ if (!clientToken || !deviceToken) throw new Error("WORKBRIDGE_CLIENT_TOKEN and W
 
 const registry = new DeviceRegistry();
 const eventStore = process.env.WORKBRIDGE_EXECUTION_EVENT_FILE ? new JsonlExecutionEventStore(process.env.WORKBRIDGE_EXECUTION_EVENT_FILE) : undefined;
-const logic = new LogicOrchestrator(capacity.logic, eventStore);
+const logic = new LogicOrchestrator(capacity.upstreamContexts, eventStore);
 const resourceGate = new ResourceKeyGate();
 const effects = new EffectLedger();
 
@@ -50,10 +50,10 @@ const server = http.createServer(async (req, res) => {
       status: "ok",
       connectedDeviceCount: registry.list().length,
       executionCapacityPerDevice: capacity.executionPerDevice,
-      logicCapacity: capacity.logic,
+      upstreamContextCapacity: capacity.upstreamContexts,
       qualification,
-      logicActive: logic.activeCount,
-      logicQueued: logic.queuedCount,
+      upstreamContextActive: logic.activeCount,
+      upstreamContextQueued: logic.queuedCount,
       executionActive: registry.list().reduce((sum, id) => sum + (registry.get(id)?.activeCount ?? 0), 0),
       executionQueued: registry.list().reduce((sum, id) => sum + (registry.get(id)?.queuedCount ?? 0), 0),
       devices: registry.list().map(id => registry.describe(id))
