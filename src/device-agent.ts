@@ -13,12 +13,13 @@ const installRoot = process.env.WORKBRIDGE_INSTALL_ROOT ?? (process.platform ===
   ? "C:\\ProgramData\\WorkBridgeMCP\\DesktopCommanderMCP"
   : "/opt/workbridge/DesktopCommanderMCP");
 
-if (!serviceUrl || !token || !deviceId) {
-  throw new Error("WORKBRIDGE_SERVICE_URL, WORKBRIDGE_DEVICE_TOKEN and WORKBRIDGE_DEVICE_ID are required");
-}
+if (!serviceUrl || !token || !deviceId) throw new Error("WORKBRIDGE_SERVICE_URL, WORKBRIDGE_DEVICE_TOKEN and WORKBRIDGE_DEVICE_ID are required");
 
 const manifestPath = path.join(installRoot, "workbridge-desktop-commander.manifest.json");
-const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {\n  schema: string;\n  upstream_commit: string;\n  upstream_version: string;
+const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
+  schema: string;
+  upstream_commit: string;
+  upstream_version: string;
   node_executable_relative: string;
   node_sha256: string;
   entrypoint_relative: string;
@@ -26,7 +27,11 @@ const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {\n  schema
   mcp_args: string[];
 };
 
-if (manifest.schema !== "WORKBRIDGE_DESKTOP_COMMANDER_DUPLICATE_V1") throw new Error("unsupported WorkBridge duplicate manifest schema");\nif (manifest.upstream_commit !== "550a0b3e31da18b7cf25e87ed840e3d953b6da42") throw new Error("unqualified Desktop Commander upstream commit");\nif (manifest.upstream_version !== "0.2.51") throw new Error("unqualified Desktop Commander upstream version");\n\nasync function sha256(file: string) {
+if (manifest.schema !== "WORKBRIDGE_DESKTOP_COMMANDER_DUPLICATE_V1") throw new Error("unsupported WorkBridge duplicate manifest schema");
+if (manifest.upstream_commit !== "550a0b3e31da18b7cf25e87ed840e3d953b6da42") throw new Error("unqualified Desktop Commander upstream commit");
+if (manifest.upstream_version !== "0.2.51") throw new Error("unqualified Desktop Commander upstream version");
+
+async function sha256(file: string) {
   return createHash("sha256").update(await readFile(file)).digest("hex");
 }
 
@@ -34,11 +39,7 @@ const nodeExe = resolveInsideRoot(installRoot, manifest.node_executable_relative
 const entrypoint = resolveInsideRoot(installRoot, manifest.entrypoint_relative);
 if (await sha256(nodeExe) !== manifest.node_sha256.toLowerCase()) throw new Error("packaged Node hash mismatch");
 if (await sha256(entrypoint) !== manifest.entrypoint_sha256.toLowerCase()) throw new Error("Desktop Commander entrypoint hash mismatch");
-
-const expectedEntryArg = path.normalize(manifest.entrypoint_relative);
-if (!manifest.mcp_args.length || path.normalize(manifest.mcp_args[0]) !== expectedEntryArg) {
-  throw new Error("manifest mcp_args do not bind the qualified entrypoint");
-}
+if (!manifest.mcp_args.length || path.normalize(manifest.mcp_args[0]) !== path.normalize(manifest.entrypoint_relative)) throw new Error("manifest mcp_args do not bind the qualified entrypoint");
 
 const child = spawn(nodeExe, manifest.mcp_args, {
   cwd: installRoot,
@@ -47,10 +48,11 @@ const child = spawn(nodeExe, manifest.mcp_args, {
   windowsHide: true
 });
 
+const LF = String.fromCharCode(10);
 let buffer = "";
 const pendingOutbound = new Map<string | number, { requestId: string; originalId: JsonRpc["id"] }>();
 let localId = 1;
-let ws: WebSocket;
+let ws: WebSocket | undefined;
 let reconnectAttempt = 0;
 let stopped = false;
 
@@ -59,37 +61,31 @@ function connect() {
   assertSafeDeviceServiceUrl(url);
   url.pathname = "/device";
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-  ws = new WebSocket(url);
+  const socket = new WebSocket(url, { maxPayload: 2_000_000 });
+  ws = socket;
 
-  ws.on("open", () => {
+  socket.on("open", () => {
     reconnectAttempt = 0;
-    ws.send(JSON.stringify({ type: "hello", deviceId, token }));
+    socket.send(JSON.stringify({ type: "hello", deviceId, token }));
   });
 
-  ws.on("message", raw => {
-    const message = JSON.parse(raw.toString()) as Partial<DeviceRequest> & { type?: string };
-    if (message.type === "request" && typeof message.requestId === "string" && message.payload) {
-      if (message.payload.id === undefined) {
-        child.stdin.write(JSON.stringify(message.payload) + "
-");
-        return;
-      }
-      const bridgeId = localId++;
-      pendingOutbound.set(bridgeId, { requestId: message.requestId, originalId: message.payload.id });
-      child.stdin.write(JSON.stringify({ ...message.payload, id: bridgeId }) + "
-");
+  socket.on("message", raw => {
+    let message: Partial<DeviceRequest> & { type?: string };
+    try { message = JSON.parse(raw.toString()); } catch { socket.close(4002, "invalid json"); return; }
+    if (message.type !== "request" || typeof message.requestId !== "string" || !message.payload) return;
+    if (message.payload.id === undefined) {
+      child.stdin.write(JSON.stringify(message.payload) + LF);
+      return;
     }
+    const bridgeId = localId++;
+    pendingOutbound.set(bridgeId, { requestId: message.requestId, originalId: message.payload.id });
+    child.stdin.write(JSON.stringify({ ...message.payload, id: bridgeId }) + LF);
   });
 
-  ws.on("error", error => {
-    console.error(JSON.stringify({ status: "device-websocket-error", message: error.message }));
-  });
-
-  ws.on("close", () => {
+  socket.on("error", error => console.error(JSON.stringify({ status: "device-websocket-error", message: error.message })));
+  socket.on("close", () => {
     if (stopped) return;
-    for (const marker of pendingOutbound.values()) {
-      console.error(JSON.stringify({ status: "request-abandoned-on-disconnect", requestId: marker.requestId }));
-    }
+    for (const marker of pendingOutbound.values()) console.error(JSON.stringify({ status: "request-outcome-unknown-after-disconnect", requestId: marker.requestId }));
     pendingOutbound.clear();
     const delay = Math.min(30_000, 1_000 * (2 ** Math.min(reconnectAttempt++, 5)));
     setTimeout(connect, delay);
@@ -98,8 +94,7 @@ function connect() {
 
 child.stdout.on("data", chunk => {
   buffer += chunk.toString();
-  const lines = buffer.split("
-");
+  const lines = buffer.split(LF);
   buffer = lines.pop() ?? "";
   for (const raw of lines) {
     const line = raw.trim();
@@ -110,13 +105,7 @@ child.stdout.on("data", chunk => {
     const marker = pendingOutbound.get(payload.id as string | number);
     if (!marker) continue;
     pendingOutbound.delete(payload.id as string | number);
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        type: "response",
-        requestId: marker.requestId,
-        payload: { ...payload, id: marker.originalId }
-      }));
-    }
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "response", requestId: marker.requestId, payload: { ...payload, id: marker.originalId } }));
   }
 });
 
