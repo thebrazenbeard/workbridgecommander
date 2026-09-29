@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DeviceConnection } from "../device-registry.js";
+import { DeviceConnection, DeviceEffectError } from "../device-registry.js";
 
 class FakeSocket {
   sent: any[] = [];
@@ -44,4 +44,15 @@ test("disconnect rejects in-flight requests and a replacement does not replay th
   const replacementSocket = new FakeSocket();
   new DeviceConnection("fake", replacementSocket as any, 4);
   assert.equal(replacementSocket.sent.length, 0);
+});
+
+test("disconnect classifies an already-dispatched request as outcome unknown", async () => {
+  const socket = new FakeSocket();
+  const device = new DeviceConnection("fake", socket as any, 1);
+  const pending = device.request({ jsonrpc: "2.0", id: 1, method: "tools/call" }, 5000);
+  await new Promise(resolve => setTimeout(resolve, 5));
+  device.close("link lost");
+  await assert.rejects(pending, (error: unknown) =>
+    error instanceof DeviceEffectError && error.disposition === "OUTCOME_UNKNOWN"
+  );
 });
