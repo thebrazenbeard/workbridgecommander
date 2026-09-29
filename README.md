@@ -31,7 +31,7 @@ WorkBridgeMCP owns the exact source pin, build/package procedure, integrity mani
 
 ## Parallel work model
 
-WorkBridge Commander separates reasoning concurrency from workstation-effect concurrency. Up to 32 logic lanes can decompose and prepare work; no more than 4 execution lanes may concurrently carry workstation effects. Logic concurrency does not multiply authority: effect-bearing work must be admitted to an execution lane with its target and operation identity preserved.
+WorkBridge Commander separates reasoning concurrency from workstation-effect concurrency. The default qualified profile admits 32 concurrent logic work units and 4 concurrent workstation effects per device; both capacities are configurable upward. Logic concurrency does not itself add workstation authority. Logic concurrency does not multiply authority: effect-bearing work must be admitted to an execution lane with its target and operation identity preserved.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the lane contract.
 
@@ -43,7 +43,7 @@ Multiple-machine selection, account/device lifecycle, and the public remote endp
 
 ## Repository role
 
-This repository is deliberately thin. It does **not** fork DesktopCommanderMCP or duplicate WorkBridgeMCP's build logic. That avoids a second implementation lineage.
+This repository owns the remote transport/orchestration implementation. It does **not** fork DesktopCommanderMCP or duplicate WorkBridgeMCP's workstation build logic, avoiding a second workstation implementation lineage.
 
 Source material:
 
