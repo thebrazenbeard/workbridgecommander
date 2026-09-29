@@ -12,6 +12,7 @@ export type WorkContextRecord = {
   startedAt?: number;
   finishedAt?: number;
   effectDevice?: string;
+  parentExecutionId?: string;
 };
 
 export class WorkContextOrchestrator {
@@ -21,11 +22,11 @@ export class WorkContextOrchestrator {
 
   constructor(capacity: number, store?: ExecutionEventStore) { this.pool = new LanePool(capacity); this.events = new ExecutionEventLog(200, store); }
 
-  create(): WorkContextRecord {
+  create(parentExecutionId?: string): WorkContextRecord {
     this.prune();
-    const record: WorkContextRecord = { id: randomUUID(), state: "queued", createdAt: Date.now() };
+    const record: WorkContextRecord = { id: randomUUID(), state: "queued", createdAt: Date.now(), parentExecutionId };
     this.records.set(record.id, record);
-    this.events.append(record.id, "created", { state: record.state });
+    this.events.append(record.id, "created", { state: record.state }, parentExecutionId);
     return record;
   }
 
