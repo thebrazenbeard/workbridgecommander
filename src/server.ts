@@ -96,6 +96,7 @@ const server = http.createServer(async (req, res) => {
     effects.create(effectId, deviceId, generation, false);
     const resourceHeader = req.headers["x-workbridge-resource-key"];
     const resourceKey = Array.isArray(resourceHeader) ? resourceHeader[0] : resourceHeader;
+    if (resourceKey && (resourceKey.length > 256 || !/^[A-Za-z0-9._:/-]+$/.test(resourceKey))) return json(res, 400, rpcError(payload.id, -32602, "invalid resource key"));
     const dispatch = <T>(work: (device: DeviceConnection) => Promise<T>) => {
       effects.transition(effectId, "ADMITTED");
       const execute = async () => {
