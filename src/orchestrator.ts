@@ -14,7 +14,9 @@ export type LogicLaneRecord = {
 
 export class LogicOrchestrator {
   private readonly pool: LanePool;
-  private readonly records = new Map<string, LogicLaneRecord>();\n\n  constructor(capacity: number) { this.pool = new LanePool(capacity); }
+  private readonly records = new Map<string, LogicLaneRecord>();
+
+  constructor(capacity: number) { this.pool = new LanePool(capacity); }
 
   create(): LogicLaneRecord {
     const record: LogicLaneRecord = { id: randomUUID(), state: "queued", createdAt: Date.now() };
