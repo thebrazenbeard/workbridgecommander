@@ -4,13 +4,16 @@ import { bearerAuthorized, tokenAuthorized } from "./auth.js";
 import { DeviceConnection, DeviceRegistry } from "./device-registry.js";
 import { LogicOrchestrator } from "./orchestrator.js";
 import type { DeviceHello, DeviceResponse, JsonRpc } from "./protocol.js";
-import { isJsonRpc } from "./protocol.js";\nimport { capacityConfig, qualificationStatus } from "./config.js";
+import { isJsonRpc } from "./protocol.js";
+import { capacityConfig, qualificationStatus } from "./config.js";
 
 const port = Number(process.env.PORT ?? "8787");
 const host = process.env.HOST ?? "0.0.0.0";
 const clientToken = process.env.WORKBRIDGE_CLIENT_TOKEN ?? "";
 const deviceToken = process.env.WORKBRIDGE_DEVICE_TOKEN ?? "";
-const defaultDevice = process.env.WORKBRIDGE_DEFAULT_DEVICE ?? "";\nconst capacity = capacityConfig();\nconst qualification = qualificationStatus(capacity);
+const defaultDevice = process.env.WORKBRIDGE_DEFAULT_DEVICE ?? "";
+const capacity = capacityConfig();
+const qualification = qualificationStatus(capacity);
 
 if (!clientToken || !deviceToken) {
   throw new Error("WORKBRIDGE_CLIENT_TOKEN and WORKBRIDGE_DEVICE_TOKEN are required");
