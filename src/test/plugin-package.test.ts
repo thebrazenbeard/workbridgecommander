@@ -27,13 +27,17 @@ test("Secure MCP Tunnel profile keeps Commander private and secrets external", a
   const launcher = await readFile("scripts/Start-WorkBridgeCommanderTunnel.ps1", "utf8");
 
   assert.match(profile, /url: http:\/\/127\.0\.0\.1:8787\/mcp/);
-  assert.match(profile, /Authorization: env:WORKBRIDGE_TUNNEL_AUTHORIZATION/);
-  assert.match(profile, /tunnel_id: env:OPENAI_MCP_TUNNEL_ID/);
-  assert.match(profile, /api_key: env:OPENAI_TUNNEL_RUNTIME_API_KEY/);
+  assert.equal(profile.includes("Authorization:"), false);
+  assert.equal(profile.includes("tunnel_id:"), false);
+  assert.equal(profile.includes("api_key:"), false);
   assert.equal(profile.includes("sk-"), false);
   assert.equal(profile.includes("Bearer "), false);
 
-  assert.match(launcher, /CONTROL_PLANE_TUNNEL_ID/);\n  assert.match(launcher, /CONTROL_PLANE_API_KEY/);\n  assert.match(launcher, /MCP_EXTRA_HEADERS/);\n  assert.match(launcher, /Authorization: Bearer/);
+  assert.match(launcher, /CONTROL_PLANE_TUNNEL_ID/);
+  assert.match(launcher, /CONTROL_PLANE_API_KEY/);
+  assert.match(launcher, /MCP_EXTRA_HEADERS/);
+  assert.match(launcher, /Authorization: Bearer/);
+  assert.match(launcher, /127\.0\.0\.1:8787\/health/);
   assert.match(launcher, /doctor --profile-file/);
   assert.match(launcher, /run --profile-file/);
 });
