@@ -4,13 +4,13 @@ Status: SOURCE DESIGN / REMOTE SERVICE NOT CLAIMED DEPLOYED
 
 ## Commander orchestration profile
 
-The repository description establishes a baseline concurrency target of **at least 4 parallel execution lanes per device and at least 32 parallel logic lanes**. These are qualification defaults/floors, not hard product maxima.
+The repository description establishes a baseline concurrency target of **at least 4 parallel execution lanes per device and at least 32 parallel upstream work contexts**. These are qualification defaults/floors, not hard product maxima.
 
 These are separate layers:
 
 - **Execution lanes (default 4 per device):** the scheduler admits up to the configured per-device workstation-effect capacity; 4 is the qualification floor/default, and operators may raise it. Each lane needs an explicit target device/session, operation identity, lifecycle state, and result/error channel. Concurrency does not imply shared shell state.
-- **Logic lanes (default 32):** the scheduler admits up to the configured concurrent work-unit capacity; 32 is the qualification floor/default, and operators may raise it. Logic lanes may inspect, decompose, compare, or prepare work without automatically acquiring workstation execution authority.
-- **Effect gate:** a logic lane must bind to one of the four execution lanes before causing workstation effects. Queueing/scheduling must preserve target, ordering requirements, cancellation, and result provenance.
+- **Upstream work contexts (default 32):** the scheduler admits up to the configured concurrent work-unit capacity; 32 is the qualification floor/default, and operators may raise it. Upstream work contexts may inspect, decompose, compare, or prepare work without automatically acquiring workstation execution authority.
+- **Effect gate:** a upstream work context must bind to one of the four execution lanes before causing workstation effects. Queueing/scheduling must preserve target, ordering requirements, cancellation, and result provenance.
 - **No authority multiplication:** raising scheduling capacity does not create new workstation permissions. Authority remains whatever the authenticated workstation payload and operator have granted.
 
 The remote service/orchestrator owns lane scheduling. DesktopCommanderMCP remains the workstation MCP payload; WorkBridgeMCP remains its qualification/package authority. Lane orchestration must wrap calls without changing the underlying Desktop Commander tool schemas or semantics.
@@ -31,7 +31,7 @@ It must not silently become a second workstation implementation.
 
 ### VeraMesh
 
-Owns the secure MCP tunnel between the remote-facing service and the workstation payload. It is responsible for authenticating/binding the packaged runtime and exact Desktop Commander entrypoint before launch.
+Is the intended secure transport/integration boundary. The Commander source currently contains and qualifies its own authenticated WebSocket device attachment, so VeraMesh transport consumption is not claimed unless an exact adapter/runtime route is separately verified. WorkBridge manifest/hash verification remains the payload identity boundary in the current Commander device agent.
 
 ### VeraRelay
 
@@ -57,9 +57,7 @@ WorkBridgeMCP's duplicate contract requires exact-source pinning and verificatio
 
 ## Remote service boundary
 
-A complete remote product still requires a service layer for authenticated MCP ingress, device/account association, tunnel session establishment, device selection, lifecycle/revocation, and routing to VeraMesh.
-
-This repository does not invent an endpoint or claim those pieces deployed. The manifests therefore contain an unmistakable endpoint placeholder until a deployed service exists.
+This repository now contains a source-level service implementation for authenticated MCP ingress, device attachment, device selection, generation fencing, lifecycle handling, and effect routing. It does not claim a public deployment, production account/device lifecycle, or an active VeraMesh route merely from that source. The manifests therefore contain an unmistakable endpoint placeholder until a deployed service exists.
 
 ## Evidence ladder
 
