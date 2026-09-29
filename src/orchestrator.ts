@@ -19,6 +19,7 @@ export class LogicOrchestrator {
   constructor(capacity: number) { this.pool = new LanePool(capacity); }
 
   create(): LogicLaneRecord {
+    this.prune();
     const record: LogicLaneRecord = { id: randomUUID(), state: "queued", createdAt: Date.now() };
     this.records.set(record.id, record);
     return record;
@@ -52,6 +53,14 @@ export class LogicOrchestrator {
   list() { return [...this.records.values()]; }
   get activeCount() { return this.pool.activeCount; }
   get queuedCount() { return this.pool.queuedCount; }
+
+  private prune() {
+    if (this.records.size < 1024) return;
+    const finished = [...this.records.values()]
+      .filter(lane => lane.finishedAt !== undefined)
+      .sort((a, b) => (a.finishedAt ?? 0) - (b.finishedAt ?? 0));
+    for (const lane of finished.slice(0, Math.max(1, this.records.size - 1023))) this.records.delete(lane.id);
+  }
 
   private require(id: string) {
     const lane = this.records.get(id);
