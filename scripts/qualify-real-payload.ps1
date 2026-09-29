@@ -13,8 +13,7 @@ try {
   git checkout --detach FETCH_HEAD
   if ($LASTEXITCODE -ne 0) { throw "checkout failed" }
   if ((git rev-parse HEAD).Trim() -ne "550a0b3e31da18b7cf25e87ed840e3d953b6da42") { throw "upstream head mismatch" }
-  npm ci --ignore-scripts
-  if ($LASTEXITCODE -ne 0) { throw "DesktopCommander npm ci failed" }
+  npm ci --ignore-scripts --no-audit --no-fund\n  if ($LASTEXITCODE -ne 0) { throw "DesktopCommander npm ci failed" }
   npm rebuild "@vscode/ripgrep"
   if ($LASTEXITCODE -ne 0) { throw "ripgrep rebuild failed" }
   npm run build
