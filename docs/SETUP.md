@@ -40,4 +40,7 @@ The example is a shape, not a deployed URL.
 Before describing a client as connected, verify the remote MCP initialize handshake and `tools/list`. Before describing workstation control as working, execute a bounded probe against the intended paired workstation and verify the resulting local effect independently.
 
 The WorkBridgeMCP duplicate acceptance suite is the source-level baseline for the workstation payload and includes exact pin/build, tools-list, command-string execution, interactive-process tools, filesystem/search/process-control/history presence, integrity binding, and relay transparency.
-\n## Transport hardening\n\nUse HTTPS for every non-loopback service URL. Plain HTTP is accepted by the device agent only for loopback development. Set `WORKBRIDGE_ALLOWED_ORIGINS` to a comma-separated exact allowlist when browser-origin traffic is expected; absent Origin headers remain valid for non-browser MCP clients. WebSocket messages are capped at 2 MB.\n
+
+## Transport hardening
+
+Use HTTPS for every non-loopback service URL. Plain HTTP is accepted by the device agent only for loopback development. Set `WORKBRIDGE_ALLOWED_ORIGINS` to a comma-separated exact allowlist when browser-origin traffic is expected; absent Origin headers remain valid for non-browser MCP clients. WebSocket messages are capped at 2 MB.
