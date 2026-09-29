@@ -1,3 +1,5 @@
+import type { ExecutionEventStore } from "./execution-store.js";
+
 export type ExecutionEvent = {
   executionId: string;
   parentExecutionId?: string;
@@ -11,7 +13,7 @@ export class ExecutionEventLog {
   private readonly events = new Map<string, ExecutionEvent[]>();
   private readonly seq = new Map<string, number>();
 
-  constructor(private readonly maxEventsPerExecution = 200) {
+  constructor(private readonly maxEventsPerExecution = 200, private readonly store?: ExecutionEventStore) {
     if (!Number.isSafeInteger(maxEventsPerExecution) || maxEventsPerExecution < 1) throw new Error("maxEventsPerExecution must be a positive integer");
   }
 
@@ -23,6 +25,7 @@ export class ExecutionEventLog {
     list.push(event);
     if (list.length > this.maxEventsPerExecution) list.splice(0, list.length - this.maxEventsPerExecution);
     this.events.set(executionId, list);
+    if (this.store) void this.store.append(event).catch(error => console.error(JSON.stringify({ status: "execution-event-persist-failed", executionId, seq: next, message: error instanceof Error ? error.message : String(error) })));
     return event;
   }
 
