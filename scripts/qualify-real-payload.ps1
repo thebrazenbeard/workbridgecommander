@@ -84,29 +84,9 @@ try {
   $names = @($listed.result.tools | ForEach-Object { $_.name })
   if ($names -notcontains "start_process") { throw "exact DesktopCommander start_process missing through bridge" }
 
-  $jobs = @()
-  for ($n=0; $n -lt 8; $n++) {
-    $callId = 100 + $n
-    $callBody = @{ jsonrpc="2.0"; id=$callId; method="tools/call"; params=@{ name="start_process"; arguments=@{ command="powershell -NoProfile -Command `"Start-Sleep -Seconds 3; Write-Output WBC_LANE_OK`""; timeout_ms=5000 } } } | ConvertTo-Json -Depth 10
-    $jobs += Start-Job -ScriptBlock {
-      param($body)
-      $h = @{ Authorization = "Bearer qualification-client"; "x-workbridge-device" = "qualification" }
-      Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:18991/mcp" -Headers $h -ContentType "application/json" -Body $body
-    } -ArgumentList $callBody
-  }
+  node scripts/qualify-concurrency.mjs
+  if ($LASTEXITCODE -ne 0) { throw "real-payload concurrency probe failed" }
 
-  $laneFloorObserved = $false
-  for ($i=0; $i -lt 40; $i++) {
-    Start-Sleep -Milliseconds 100
-    $laneHealth = Invoke-RestMethod "http://127.0.0.1:18991/health"
-    if ($laneHealth.executionCapacityPerDevice -eq 8 -and $laneHealth.logicCapacity -eq 64 -and $laneHealth.executionActive -ge 4) { $laneFloorObserved = $true; break }
-  }
-  Wait-Job -Job $jobs -Timeout 20 | Out-Null
-  $jobFailures = @($jobs | Where-Object { $_.State -ne "Completed" })
-  $jobs | Receive-Job -ErrorAction Stop | Out-Null
-  $jobs | Remove-Job -Force
-  if ($jobFailures.Count -gt 0) { throw "real-payload concurrent calls did not complete" }
-  if (-not $laneFloorObserved) { throw "scaled 8/64 profile did not demonstrate at least 4 simultaneous real-payload effects" }
   Write-Output (@{status="PASS"; tool_count=$names.Count; upstream_commit="550a0b3e31da18b7cf25e87ed840e3d953b6da42"} | ConvertTo-Json -Compress)
 }
 finally {
