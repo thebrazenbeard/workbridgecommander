@@ -64,11 +64,13 @@ export class DeviceConnection {
 
 export class DeviceRegistry {
   private devices = new Map<string, DeviceConnection>();
+  private generations = new Map<string, number>();
 
   attach(device: DeviceConnection) {
     const prior = this.devices.get(device.id);
     if (prior && prior !== device) prior.socket.close(4001, "replaced by newer connection");
     this.devices.set(device.id, device);
+    this.generations.set(device.id, (this.generations.get(device.id) ?? 0) + 1);
   }
 
   detach(device: DeviceConnection) {
@@ -77,5 +79,13 @@ export class DeviceRegistry {
   }
 
   get(id: string) { return this.devices.get(id); }
+  resolve(id: string) {
+    const device = this.devices.get(id);
+    if (!device) return undefined;
+    return { device, generation: this.generations.get(id) ?? 0 };
+  }
+  getIfGeneration(id: string, generation: number) {
+    return this.generations.get(id) === generation ? this.devices.get(id) : undefined;
+  }
   list() { return [...this.devices.keys()].sort(); }
 }
