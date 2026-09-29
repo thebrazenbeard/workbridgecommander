@@ -2,7 +2,7 @@ import http from "node:http";
 import { WebSocketServer } from "ws";
 import { bearerAuthorized, tokenAuthorized } from "./auth.js";
 import { DeviceConnection, DeviceRegistry } from "./device-registry.js";
-import { LanePool, LOGIC_LANES } from "./lanes.js";
+import { LogicOrchestrator } from "./orchestrator.js";
 import type { DeviceHello, DeviceResponse, JsonRpc } from "./protocol.js";
 import { isJsonRpc } from "./protocol.js";
 
@@ -17,7 +17,7 @@ if (!clientToken || !deviceToken) {
 }
 
 const registry = new DeviceRegistry();
-const logic = new LanePool(LOGIC_LANES);
+const logic = new LogicOrchestrator();
 
 function json(res: http.ServerResponse, status: number, body: unknown) {
   const data = JSON.stringify(body);
@@ -41,7 +41,8 @@ const server = http.createServer(async (req, res) => {
       executionLaneLimitPerDevice: 4,
       logicLaneLimit: 32,
       logicActive: logic.activeCount,
-      logicQueued: logic.queuedCount
+      logicQueued: logic.queuedCount,
+      logicLanes: logic.list()
     });
   }
 
@@ -73,7 +74,9 @@ const server = http.createServer(async (req, res) => {
   if (!device) return json(res, 404, rpcError(payload.id, -32002, "requested workstation is not connected"));
 
   try {
-    const response = await logic.run(() => device.request(payload));
+    const lane = logic.create();
+    logic.bindEffect(lane.id, deviceId);
+    const response = await logic.run(lane.id, () => device.request(payload));
     return json(res, 200, response);
   } catch (error) {
     return json(res, 502, rpcError(payload.id, -32003, error instanceof Error ? error.message : "device bridge failed"));
