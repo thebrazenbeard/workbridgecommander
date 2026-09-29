@@ -7,6 +7,7 @@ import type { DeviceHello, DeviceResponse, JsonRpc } from "./protocol.js";
 import { isJsonRpc, isNotification } from "./protocol.js";
 import { capacityConfig, qualificationStatus } from "./config.js";
 import { isOriginAllowed } from "./security.js";
+import { ResourceKeyGate } from "./resource-gate.js";
 
 const port = Number(process.env.PORT ?? "8787");
 const host = process.env.HOST ?? "0.0.0.0";
@@ -21,6 +22,7 @@ if (!clientToken || !deviceToken) throw new Error("WORKBRIDGE_CLIENT_TOKEN and W
 
 const registry = new DeviceRegistry();
 const logic = new LogicOrchestrator(capacity.logic);
+const resourceGate = new ResourceKeyGate();
 
 function json(res: http.ServerResponse, status: number, body: unknown) {
   const data = JSON.stringify(body);
@@ -78,12 +80,15 @@ const server = http.createServer(async (req, res) => {
   try {
     const lane = logic.create();
     logic.bindEffect(lane.id, deviceId);
+    const resourceHeader = req.headers["x-workbridge-resource-key"];
+    const resourceKey = Array.isArray(resourceHeader) ? resourceHeader[0] : resourceHeader;
+    const dispatch = <T>(work: () => Promise<T>) => resourceKey ? resourceGate.run(resourceKey, work) : work();
     if (isNotification(payload)) {
-      await logic.run(lane.id, () => device.notify(payload));
+      await logic.run(lane.id, () => dispatch(() => device.notify(payload)));
       res.writeHead(202, { "cache-control": "no-store" });
       return res.end();
     }
-    const response = await logic.run(lane.id, () => device.request(payload));
+    const response = await logic.run(lane.id, () => dispatch(() => device.request(payload)));
     return json(res, 200, response);
   } catch (error) {
     return json(res, 502, rpcError(payload.id, -32003, error instanceof Error ? error.message : "device bridge failed"));
