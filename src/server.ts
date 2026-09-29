@@ -94,13 +94,13 @@ const server = http.createServer(async (req, res) => {
     const parentHeader = req.headers["x-workbridge-parent-execution"];
     const parentExecutionId = Array.isArray(parentHeader) ? parentHeader[0] : parentHeader;
     if (parentExecutionId && (parentExecutionId.length > 128 || !/^[A-Za-z0-9._:-]+$/.test(parentExecutionId))) return json(res, 400, rpcError(payload.id, -32602, "invalid parent execution id"));
+    const resourceHeader = req.headers["x-workbridge-resource-key"];
+    const resourceKey = Array.isArray(resourceHeader) ? resourceHeader[0] : resourceHeader;
+    if (resourceKey && (resourceKey.length > 256 || !/^[A-Za-z0-9._:/-]+$/.test(resourceKey))) return json(res, 400, rpcError(payload.id, -32602, "invalid resource key"));
     const lane = logic.create(parentExecutionId);
     logic.bindEffect(lane.id, deviceId);
     const effectId = randomUUID();
     effects.create(effectId, deviceId, generation, false);
-    const resourceHeader = req.headers["x-workbridge-resource-key"];
-    const resourceKey = Array.isArray(resourceHeader) ? resourceHeader[0] : resourceHeader;
-    if (resourceKey && (resourceKey.length > 256 || !/^[A-Za-z0-9._:/-]+$/.test(resourceKey))) return json(res, 400, rpcError(payload.id, -32602, "invalid resource key"));
     const dispatch = <T>(work: (device: DeviceConnection) => Promise<T>) => {
       effects.transition(effectId, "ADMITTED");
       const execute = async () => {
