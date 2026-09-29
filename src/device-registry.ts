@@ -13,7 +13,9 @@ export class DeviceConnection {
   readonly execution: LanePool;
   private pending = new Map<string, Pending>();
 
-  constructor(readonly id: string, readonly socket: WebSocket, executionCapacity: number) {\n    this.execution = new LanePool(executionCapacity);\n  }
+  constructor(readonly id: string, readonly socket: WebSocket, executionCapacity: number) {
+    this.execution = new LanePool(executionCapacity);
+  }
 
   accept(message: DeviceResponse) {
     const p = this.pending.get(message.requestId);
