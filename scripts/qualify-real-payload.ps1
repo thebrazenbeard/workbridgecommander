@@ -45,7 +45,7 @@ try {
   $env:WORKBRIDGE_DEFAULT_DEVICE = "qualification"
   $env:WORKBRIDGE_SERVICE_URL = "http://127.0.0.1:18991"
   $env:WORKBRIDGE_DEVICE_ID = "qualification"
-  $env:WORKBRIDGE_INSTALL_ROOT = $dc
+  $env:WORKBRIDGE_INSTALL_ROOT = $dc\n  $env:WORKBRIDGE_TRUSTED_MANIFEST_SHA256 = (Get-FileHash -Algorithm SHA256 (Join-Path $dc "workbridge-desktop-commander.manifest.json")).Hash.ToLowerInvariant()
 
   $server = Start-Process node -ArgumentList "dist/server.js" -PassThru -NoNewWindow
   for ($i=0; $i -lt 40; $i++) {
