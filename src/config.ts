@@ -1,5 +1,5 @@
 export const QUALIFICATION_EXECUTION_FLOOR = 4;
-export const QUALIFICATION_LOGIC_FLOOR = 32;
+export const QUALIFICATION_UPSTREAM_CONTEXT_FLOOR = 32;
 
 function positiveInt(name: string, raw: string | undefined, fallback: number): number {
   if (raw === undefined || raw === "") return fallback;
@@ -10,21 +10,21 @@ function positiveInt(name: string, raw: string | undefined, fallback: number): n
 
 export type CapacityConfig = {
   executionPerDevice: number;
-  logic: number;
+  upstreamContexts: number;
 };
 
 export function capacityConfig(env: NodeJS.ProcessEnv = process.env): CapacityConfig {
   return {
     executionPerDevice: positiveInt("WORKBRIDGE_EXECUTION_CAPACITY", env.WORKBRIDGE_EXECUTION_CAPACITY, QUALIFICATION_EXECUTION_FLOOR),
-    logic: positiveInt("WORKBRIDGE_LOGIC_CAPACITY", env.WORKBRIDGE_LOGIC_CAPACITY, QUALIFICATION_LOGIC_FLOOR)
+    upstreamContexts: positiveInt("WORKBRIDGE_UPSTREAM_CONTEXT_CAPACITY", env.WORKBRIDGE_UPSTREAM_CONTEXT_CAPACITY ?? env.WORKBRIDGE_LOGIC_CAPACITY, QUALIFICATION_UPSTREAM_CONTEXT_FLOOR)
   };
 }
 
 export function qualificationStatus(config: CapacityConfig) {
   return {
     executionFloor: QUALIFICATION_EXECUTION_FLOOR,
-    logicFloor: QUALIFICATION_LOGIC_FLOOR,
+    upstreamContextFloor: QUALIFICATION_UPSTREAM_CONTEXT_FLOOR,
     executionMeetsFloor: config.executionPerDevice >= QUALIFICATION_EXECUTION_FLOOR,
-    logicMeetsFloor: config.logic >= QUALIFICATION_LOGIC_FLOOR
+    upstreamContextMeetsFloor: config.upstreamContexts >= QUALIFICATION_UPSTREAM_CONTEXT_FLOOR
   };
 }
