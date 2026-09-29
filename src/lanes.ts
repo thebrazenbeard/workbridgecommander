@@ -34,6 +34,3 @@ export class LanePool {
     if (next) next();
   }
 }
-
-export const EXECUTION_LANES = 4;
-export const LOGIC_LANES = 32;
