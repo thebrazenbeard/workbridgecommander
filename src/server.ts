@@ -1,7 +1,7 @@
 import http from "node:http";
 import { WebSocketServer } from "ws";
 import { bearerAuthorized, tokenAuthorized } from "./auth.js";
-import { DeviceConnection, DeviceRegistry } from "./device-registry.js";
+import { DeviceConnection, DeviceEffectError, DeviceRegistry } from "./device-registry.js";
 import { LogicOrchestrator } from "./orchestrator.js";
 import type { DeviceHello, DeviceResponse, JsonRpc } from "./protocol.js";
 import { isJsonRpc, isNotification } from "./protocol.js";
@@ -9,6 +9,8 @@ import { capacityConfig, qualificationStatus } from "./config.js";
 import { isOriginAllowed } from "./security.js";
 import { ResourceKeyGate } from "./resource-gate.js";
 import { JsonlExecutionEventStore } from "./execution-store.js";
+import { EffectLedger } from "./effect-ledger.js";
+import { randomUUID } from "node:crypto";
 
 const port = Number(process.env.PORT ?? "8787");
 const host = process.env.HOST ?? "0.0.0.0";
@@ -25,6 +27,7 @@ const registry = new DeviceRegistry();
 const eventStore = process.env.WORKBRIDGE_EXECUTION_EVENT_FILE ? new JsonlExecutionEventStore(process.env.WORKBRIDGE_EXECUTION_EVENT_FILE) : undefined;
 const logic = new LogicOrchestrator(capacity.logic, eventStore);
 const resourceGate = new ResourceKeyGate();
+const effects = new EffectLedger();
 
 function json(res: http.ServerResponse, status: number, body: unknown) {
   const data = JSON.stringify(body);
@@ -84,13 +87,27 @@ const server = http.createServer(async (req, res) => {
   try {
     const lane = logic.create();
     logic.bindEffect(lane.id, deviceId);
+    const effectId = randomUUID();
+    effects.create(effectId, deviceId, generation, false);
     const resourceHeader = req.headers["x-workbridge-resource-key"];
     const resourceKey = Array.isArray(resourceHeader) ? resourceHeader[0] : resourceHeader;
     const dispatch = <T>(work: (device: DeviceConnection) => Promise<T>) => {
-      const execute = () => {
+      effects.transition(effectId, "ADMITTED");
+      const execute = async () => {
         const current = registry.getIfGeneration(deviceId, generation);
-        if (!current) throw new Error("workstation connection changed before effect dispatch");
-        return work(current);
+        if (!current) {
+          effects.transition(effectId, "FAILED");
+          throw new Error("workstation connection changed before effect dispatch");
+        }
+        effects.transition(effectId, "DISPATCHED");
+        try {
+          const value = await work(current);
+          effects.transition(effectId, "COMPLETED");
+          return value;
+        } catch (error) {
+          effects.transition(effectId, error instanceof DeviceEffectError && error.disposition === "OUTCOME_UNKNOWN" ? "OUTCOME_UNKNOWN" : "FAILED");
+          throw error;
+        }
       };
       return resourceKey ? resourceGate.run(resourceKey, execute) : execute();
     };
