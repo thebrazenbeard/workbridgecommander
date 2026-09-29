@@ -59,7 +59,7 @@
     {
       "id": "WBC-11",
       "requirement": "Disconnect rejects in-flight requests and reconnect does not silently replay them.",
-      "automated": false
+      "automated": true
     },
     {
       "id": "WBC-12",
@@ -78,4 +78,4 @@
       "automated": false
     }
   ]
-}\n
+}
