@@ -18,7 +18,7 @@ if (!serviceUrl || !token || !deviceId) {
 }
 
 const manifestPath = path.join(installRoot, "workbridge-desktop-commander.manifest.json");
-const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
+const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {\n  schema: string;\n  upstream_commit: string;\n  upstream_version: string;
   node_executable_relative: string;
   node_sha256: string;
   entrypoint_relative: string;
@@ -26,7 +26,7 @@ const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
   mcp_args: string[];
 };
 
-async function sha256(file: string) {
+if (manifest.schema !== "WORKBRIDGE_DESKTOP_COMMANDER_DUPLICATE_V1") throw new Error("unsupported WorkBridge duplicate manifest schema");\nif (manifest.upstream_commit !== "550a0b3e31da18b7cf25e87ed840e3d953b6da42") throw new Error("unqualified Desktop Commander upstream commit");\nif (manifest.upstream_version !== "0.2.51") throw new Error("unqualified Desktop Commander upstream version");\n\nasync function sha256(file: string) {
   return createHash("sha256").update(await readFile(file)).digest("hex");
 }
 
