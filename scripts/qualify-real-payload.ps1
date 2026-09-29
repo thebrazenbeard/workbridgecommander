@@ -30,7 +30,7 @@ try {
     upstream_repository = "https://github.com/wonderwhy-er/DesktopCommanderMCP.git"
     upstream_commit = "550a0b3e31da18b7cf25e87ed840e3d953b6da42"
     upstream_version = "0.2.51"
-    node_executable_relative = "workbridge-runtime\\node.exe"
+    node_executable_relative = "workbridge-runtime/node.exe"
     node_sha256 = (Get-FileHash -Algorithm SHA256 (Join-Path $runtime "node.exe")).Hash.ToLowerInvariant()
     entrypoint_relative = "dist\index.js"
     entrypoint_sha256 = (Get-FileHash -Algorithm SHA256 (Join-Path $dc "dist\index.js")).Hash.ToLowerInvariant()
@@ -40,8 +40,8 @@ try {
   $manifestPath = Join-Path $dc "workbridge-desktop-commander.manifest.json"
   $manifest | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 $manifestPath
   $roundTrip = Get-Content -Raw $manifestPath | ConvertFrom-Json
-  if ($roundTrip.node_executable_relative -ne "workbridge-runtime\\node.exe") { throw "manifest node path round-trip mismatch" }
-  if ($roundTrip.entrypoint_relative -ne "dist\\index.js") { throw "manifest entrypoint path round-trip mismatch" }
+  if ($roundTrip.node_executable_relative -ne "workbridge-runtime/node.exe") { throw "manifest node path round-trip mismatch" }
+  if ($roundTrip.entrypoint_relative -ne "dist/index.js") { throw "manifest entrypoint path round-trip mismatch" }
 
   $env:PORT = "18991"
   $env:HOST = "127.0.0.1"
