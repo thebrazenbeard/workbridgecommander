@@ -31,7 +31,7 @@ WorkBridgeMCP owns the exact source pin, build/package procedure, integrity mani
 
 ## Parallel work model
 
-WorkBridge Commander separates reasoning concurrency from workstation-effect concurrency. The default qualified profile admits 32 concurrent logic work units and 4 concurrent workstation effects per device; both capacities are configurable upward. Logic concurrency does not itself add workstation authority. Logic concurrency does not multiply authority: effect-bearing work must be admitted to an execution lane with its target and operation identity preserved.
+WorkBridge Commander separates independent upstream request-context concurrency from workstation-effect concurrency. The default qualified profile admits 32 concurrent upstream work contexts and 4 concurrent workstation effects per device; both capacities are configurable upward. These are scheduler/admission contexts, not model workers or additional reasoning agents, and they do not multiply workstation authority. Effect-bearing work must be admitted to an execution lane with its target and operation identity preserved.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the lane contract.
 
@@ -55,7 +55,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/SETUP.md](docs/SETUP.md)
 
 ## Current status
 
-Repository/plugin implementation: **implemented and CI-verified on the feature branch**. The repository now contains the remote MCP ingress service, authenticated device bridge, WorkBridge manifest/hash verification, 4-execution/32-logic lane enforcement, runnable device agent, Docker packaging, and tests.
+Repository/plugin implementation: **implemented and CI-verified on the feature branch**. The repository now contains the remote MCP ingress service, authenticated device bridge, WorkBridge manifest/hash verification, configurable execution/upstream-work concurrency with 4/32 qualification floors, runnable device agent, Docker packaging, and tests.
 
 Production deployment, public endpoint assignment, workstation installation/activation, and live AI-to-workstation effects require separate runtime evidence. The service currently uses explicit bearer/device tokens; OAuth/device-code UX is not yet implemented. Placeholder endpoint values in manifests are intentionally explicit and must be replaced only when an actual service endpoint is deployed and verified.
 
