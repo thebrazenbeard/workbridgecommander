@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { LanePool } from "./lanes.js";
+import { ExecutionEventLog } from "./execution-events.js";
 
 export type LogicLaneState = "queued" | "running" | "waiting-for-effect" | "completed" | "failed";
 
@@ -15,6 +16,7 @@ export type LogicLaneRecord = {
 export class LogicOrchestrator {
   private readonly pool: LanePool;
   private readonly records = new Map<string, LogicLaneRecord>();
+  readonly events = new ExecutionEventLog();
 
   constructor(capacity: number) { this.pool = new LanePool(capacity); }
 
@@ -22,6 +24,7 @@ export class LogicOrchestrator {
     this.prune();
     const record: LogicLaneRecord = { id: randomUUID(), state: "queued", createdAt: Date.now() };
     this.records.set(record.id, record);
+    this.events.append(record.id, "created", { state: record.state });
     return record;
   }
 
@@ -30,14 +33,17 @@ export class LogicOrchestrator {
     return this.pool.run(async () => {
       lane.state = "running";
       lane.startedAt = Date.now();
+      this.events.append(lane.id, "running", { state: lane.state, effectDevice: lane.effectDevice });
       try {
         const result = await work();
         lane.state = "completed";
         lane.finishedAt = Date.now();
+        this.events.append(lane.id, "completed", { state: lane.state, effectDevice: lane.effectDevice });
         return result;
       } catch (error) {
         lane.state = "failed";
         lane.finishedAt = Date.now();
+        this.events.append(lane.id, "failed", { state: lane.state, effectDevice: lane.effectDevice, error: error instanceof Error ? error.message : String(error) });
         throw error;
       }
     });
@@ -47,6 +53,7 @@ export class LogicOrchestrator {
     const lane = this.require(laneId);
     lane.effectDevice = deviceId;
     lane.state = "waiting-for-effect";
+    this.events.append(lane.id, "effect-bound", { state: lane.state, effectDevice: deviceId });
   }
 
   get(laneId: string) { return this.records.get(laneId); }
