@@ -8,6 +8,7 @@ const headers = {
 let maxActive = 0;
 let maxQueued = 0;
 let stopped = false;
+let capacityMismatch = false;
 const sampler = (async () => {
   while (!stopped) {
     try {
@@ -16,7 +17,7 @@ const sampler = (async () => {
       maxActive = Math.max(maxActive, Number(h.executionActive ?? 0));
       maxQueued = Math.max(maxQueued, Number(h.executionQueued ?? 0));
       if (h.executionCapacityPerDevice !== 8 || h.logicCapacity !== 64) {
-        throw new Error("qualification capacity is not 8/64");
+        capacityMismatch = true;
       }
     } catch {}
     await new Promise(r => setTimeout(r, 25));
@@ -50,5 +51,6 @@ try {
   stopped = true;
   await sampler;
 }
+if (capacityMismatch) throw new Error("qualification capacity is not 8/64");
 if (maxActive < 4) throw new Error(`real-payload overlap below floor: maxActive=${maxActive}, maxQueued=${maxQueued}`);
 console.log(JSON.stringify({ status: "PASS", maxActive, maxQueued, calls: calls.length }));
