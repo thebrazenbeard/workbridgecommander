@@ -50,6 +50,8 @@ try {
   $env:WORKBRIDGE_DEFAULT_DEVICE = "qualification"
   $env:WORKBRIDGE_SERVICE_URL = "http://127.0.0.1:18991"
   $env:WORKBRIDGE_DEVICE_ID = "qualification"
+  $env:WORKBRIDGE_EXECUTION_CAPACITY = "8"
+  $env:WORKBRIDGE_LOGIC_CAPACITY = "64"
   $env:WORKBRIDGE_INSTALL_ROOT = $dc
   $env:WORKBRIDGE_TRUSTED_MANIFEST_SHA256 = (Get-FileHash -Algorithm SHA256 (Join-Path $dc "workbridge-desktop-commander.manifest.json")).Hash.ToLowerInvariant()
 
@@ -97,14 +99,14 @@ try {
   for ($i=0; $i -lt 40; $i++) {
     Start-Sleep -Milliseconds 100
     $laneHealth = Invoke-RestMethod "http://127.0.0.1:18991/health"
-    if ($laneHealth.executionActive -eq 4 -and $laneHealth.executionQueued -ge 1) { $laneFloorObserved = $true; break }
+    if ($laneHealth.executionCapacityPerDevice -eq 8 -and $laneHealth.logicCapacity -eq 64 -and $laneHealth.executionActive -ge 4) { $laneFloorObserved = $true; break }
   }
   Wait-Job -Job $jobs -Timeout 20 | Out-Null
   $jobFailures = @($jobs | Where-Object { $_.State -ne "Completed" })
   $jobs | Receive-Job -ErrorAction Stop | Out-Null
   $jobs | Remove-Job -Force
   if ($jobFailures.Count -gt 0) { throw "real-payload concurrent calls did not complete" }
-  if (-not $laneFloorObserved) { throw "4-lane real-payload concurrency floor was not observed" }
+  if (-not $laneFloorObserved) { throw "scaled 8/64 profile did not demonstrate at least 4 simultaneous real-payload effects" }
   Write-Output (@{status="PASS"; tool_count=$names.Count; upstream_commit="550a0b3e31da18b7cf25e87ed840e3d953b6da42"} | ConvertTo-Json -Compress)
 }
 finally {
