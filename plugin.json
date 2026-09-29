@@ -1,0 +1,21 @@
+{
+  "name": "workbridge-commander",
+  "description": "Reach a workstation from MCP-capable AI clients through the WorkBridge Commander remote transport, using a WorkBridge-qualified Desktop Commander payload.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Patrick A. Sims"
+  },
+  "repository": "https://github.com/thebrazenbeard/workbridgecommander",
+  "license": "SEE LICENSE IN LICENSE",
+  "keywords": [
+    "mcp",
+    "remote",
+    "workstation",
+    "terminal",
+    "filesystem",
+    "automation",
+    "workbridge",
+    "desktop-commander"
+  ],
+  "mcpServers": ".mcp.json"
+}
