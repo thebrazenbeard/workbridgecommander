@@ -1,0 +1,48 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workbridge-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm install --ignore-scripts
+      - run: npm test
+      - run: npm run audit
+
+  windows-build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm install --ignore-scripts
+      - run: npm test
+      - run: npm run audit
+      - name: Qualify exact DesktopCommander payload
+        shell: powershell
+        run: .\\scripts\\qualify-real-payload.ps1
+      - name: Parse device launcher
+        shell: powershell
+        run: |
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path '.\\scripts\\Start-WorkBridgeCommanderDevice.ps1'),
+            [ref]$null,
+            [ref]$errors
+          )
+          if ($errors.Count -gt 0) { $errors | Out-String | Write-Error; exit 1 }

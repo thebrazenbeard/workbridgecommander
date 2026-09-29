@@ -1,5 +1,91 @@
 # WorkBridge Commander
 
-Remote MCP plugin surface for WorkBridge-powered workstation control.
+**Remote workstation control for AI clients, built on the WorkBridge stack.**
 
-> Bootstrap commit only. Full plugin packaging and documentation are developed on the feature branch before review.
+WorkBridge Commander is the public plugin and connector surface for reaching a workstation through a remote MCP connection, with a product-level orchestration target of **at least 4 parallel execution lanes by qualification default and at least 32 parallel logic lanes by qualification default**. It follows the same repository split used by Desktop Commander: the workstation implementation and packaging live in the implementation repository; this repository carries the remote-plugin manifests, architecture contract, setup guidance, security boundary, and provenance.
+
+## Architecture
+
+```text
+AI client
+   |
+   | Streamable HTTP / MCP
+   v
+WorkBridge Commander remote MCP ingress
+   |
+   v
+authenticated Commander device attachment
+   |
+   +-- intended VeraMesh secure-transport integration boundary
+   +-- optional VeraRelay routing/currentness layer
+   |
+   v
+WorkBridge-qualified DesktopCommanderMCP payload
+   |
+   v
+workstation
+```
+
+The Commander path intentionally preserves the DesktopCommanderMCP workstation tool semantics qualified by WorkBridgeMCP. It is not the bounded native WorkBridge Go tool surface.
+
+WorkBridgeMCP owns the exact source pin, build/package procedure, integrity manifest, qualification cases, and workstation payload. This repository currently implements the remote MCP ingress and authenticated workstation attachment bridge used by its executable qualification. VeraMesh is the intended secure transport/integration boundary where an exact adapter is available; source documentation must not pretend that a VeraMesh route is active merely because Commander contains a WebSocket bridge. VeraRelay may participate in routing, but must not rename, filter, narrow, or reinterpret the workstation MCP tool surface.
+
+## Parallel work model
+
+WorkBridge Commander separates independent upstream request-context concurrency from workstation-effect concurrency. The default qualified profile admits 32 concurrent upstream work contexts and 4 concurrent workstation effects per device; both capacities are configurable upward. These are scheduler/admission contexts, not model workers or additional reasoning agents, and they do not multiply workstation authority. Effect-bearing work must be admitted to an execution lane with its target and operation identity preserved.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the lane contract.
+
+## Intended capabilities
+
+The qualified Commander payload includes filesystem read/write/edit operations, progressive search, arbitrary command-string process launch, interactive process sessions, OS process inspection/control, local recent tool history, and upstream document/configuration tools present in the pinned DesktopCommanderMCP source.
+
+Multiple-machine selection, account/device lifecycle, and the public remote endpoint are transport/product concerns and are not claimed implemented merely because these manifests exist.
+
+## Repository role
+
+This repository owns the remote transport/orchestration implementation. It does **not** fork DesktopCommanderMCP or duplicate WorkBridgeMCP's workstation build logic, avoiding a second workstation implementation lineage.
+
+Source material:
+
+- WorkBridgeMCP: implementation, qualification, packaging and exact-source ownership
+- DesktopCommanderMCP: workstation behavior reference/payload
+- Remote Desktop Commander: reference for the separate remote-plugin repository pattern
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/SETUP.md](docs/SETUP.md), [SECURITY.md](SECURITY.md), and [PROVENANCE.md](PROVENANCE.md).
+
+## Current status
+
+Repository/plugin implementation: **implemented and CI-verified on the feature branch**. The repository now contains the remote MCP ingress service, authenticated device bridge, WorkBridge manifest/hash verification, configurable execution/upstream-work concurrency with 4/32 qualification floors, runnable device agent, Docker packaging, and tests.
+
+Production deployment, public endpoint assignment, workstation installation/activation, and live AI-to-workstation effects require separate runtime evidence. The service currently uses explicit bearer/device tokens; OAuth/device-code UX is not yet implemented. Placeholder endpoint values in manifests are intentionally explicit and must be replaced only when an actual service endpoint is deployed and verified.
+
+## Run the implementation
+
+Build and test:
+
+```bash
+npm install --ignore-scripts
+npm test
+```
+
+Run the remote service after setting `WORKBRIDGE_CLIENT_TOKEN` and `WORKBRIDGE_DEVICE_TOKEN`:
+
+```bash
+npm run build
+npm start
+```
+
+On a workstation that already has the WorkBridge-qualified DesktopCommander duplicate installed, set `WORKBRIDGE_SERVICE_URL`, `WORKBRIDGE_DEVICE_ID`, `WORKBRIDGE_DEVICE_TOKEN`, and optionally `WORKBRIDGE_INSTALL_ROOT`, then run:
+
+```powershell
+.\\scripts\\Start-WorkBridgeCommanderDevice.ps1 -ServiceUrl https://your-service.example -DeviceId lappy -DeviceToken <token> -TrustedManifestSha256 <sha256>
+```
+
+The device agent first verifies `workbridge-desktop-commander.manifest.json` against the externally supplied `WORKBRIDGE_TRUSTED_MANIFEST_SHA256` trust anchor, then verifies the packaged Node and DesktopCommander entrypoint SHA-256 values before launch. Capture/provision the manifest digest at the trusted WorkBridge installation handoff; do not derive the trust anchor from an already-suspect install at startup.
+
+## Capacity model
+
+The values 4 execution lanes per device and 32 logic lanes are qualification floors and default capacities, not product ceilings. Operators can raise them with `WORKBRIDGE_EXECUTION_CAPACITY` and `WORKBRIDGE_UPSTREAM_CONTEXT_CAPACITY`. The health response reports configured capacity and whether it meets the qualification floors. Lower values are permitted for constrained hosts but must report that they do not meet the standard qualification target.
+
+External donor research and the exact boundary between adopted patterns and runtime dependencies are recorded in `docs/EXTERNAL_DONOR_RESEARCH.md`.

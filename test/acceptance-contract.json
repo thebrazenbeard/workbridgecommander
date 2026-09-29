@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "status": "IMPLEMENTATION_ACCEPTANCE_TARGET",
+  "source_binding": {
+    "workbridge_mcp_head_observed": "8707a2e1eaf7de5ce2316567b5e6f1e805c0537b",
+    "desktop_commander_semantics": "UPSTREAM_EXACT_VIA_WORKBRIDGE_QUALIFIED_DUPLICATE"
+  },
+  "requirements": [
+    {
+      "id": "WBC-01",
+      "requirement": "Remote ingress rejects unauthenticated MCP requests.",
+      "automated": true
+    },
+    {
+      "id": "WBC-02",
+      "requirement": "Device bridge rejects unauthenticated device registration.",
+      "automated": true
+    },
+    {
+      "id": "WBC-03",
+      "requirement": "A connected device is selected explicitly or by configured default.",
+      "automated": true
+    },
+    {
+      "id": "WBC-04",
+      "requirement": "Runtime execution capacity is configurable and qualification demonstrates at least 4 concurrent workstation-effect lanes per device.",
+      "automated": true
+    },
+    {
+      "id": "WBC-05",
+      "requirement": "Execution concurrency at or above the 4-lane qualification floor is demonstrated against a real WorkBridge-qualified DesktopCommander payload, not inferred from a queue unit test.",
+      "automated": true,
+      "note": "Windows CI runs eight concurrent real start_process calls through the exact pinned DesktopCommander payload under an 8-execution/64-upstream-context profile and requires at least four simultaneous effects to be observed."
+    },
+    {
+      "id": "WBC-06",
+      "requirement": "Runtime upstream-context capacity is configurable and qualification configures at least 32 independently identified upstream work contexts; these are scheduler contexts, not model workers, and identity is distinct from effect authority.",
+      "automated": true
+    },
+    {
+      "id": "WBC-07",
+      "requirement": "An upstream work context must bind an explicit device before workstation effect dispatch.",
+      "automated": true
+    },
+    {
+      "id": "WBC-08",
+      "requirement": "Concurrent client JSON-RPC IDs cannot collide inside the workstation bridge.",
+      "automated": true
+    },
+    {
+      "id": "WBC-09",
+      "requirement": "Packaged Node and DesktopCommander entrypoint hashes are checked before process launch.",
+      "automated": true
+    },
+    {
+      "id": "WBC-10",
+      "requirement": "The WorkBridge manifest is authenticated against trusted provenance rather than trusted solely because it is local.",
+      "automated": true,
+      "note": "Device startup requires WORKBRIDGE_TRUSTED_MANIFEST_SHA256 and rejects malformed or mismatched SHA-256 trust anchors; exact-payload CI supplies the independently captured manifest digest."
+    },
+    {
+      "id": "WBC-11",
+      "requirement": "Disconnect rejects in-flight requests and reconnect does not silently replay them.",
+      "automated": true
+    },
+    {
+      "id": "WBC-12",
+      "requirement": "Official MCP SDK initialize/tools-list round trip succeeds through remote ingress and device bridge; real WorkBridge-qualified payload execution is qualified separately.",
+      "automated": true
+    },
+    {
+      "id": "WBC-13",
+      "requirement": "Windows device-agent operation is exercised on CI or equivalent clean Windows runner.",
+      "automated": true,
+      "note": "Windows CI builds/tests the implementation, parses the launcher, builds the exact pinned DesktopCommander payload, launches the device bridge, verifies MCP initialize/tools-list, and executes concurrent real start_process calls through the bridge."
+    },
+    {
+      "id": "WBC-14",
+      "requirement": "Production endpoint, OAuth/device pairing, deployment, and activation remain separate effect claims.",
+      "automated": false
+    },
+    {
+      "id": "WBC-15",
+      "requirement": "A stale device generation is rejected before dispatch, while timeout or disconnect after dispatch is classified OUTCOME_UNKNOWN and is never silently replayed.",
+      "automated": true
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.thebrazenbeard/workbridge-commander",
+  "title": "WorkBridge Commander",
+  "description": "Remote MCP plugin surface for WorkBridge-powered workstation control",
+  "repository": {
+    "url": "https://github.com/thebrazenbeard/workbridgecommander",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://REPLACE-WITH-DEPLOYED-WORKBRIDGE-COMMANDER-ENDPOINT/mcp"
+    }
+  ]
+}
