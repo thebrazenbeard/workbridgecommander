@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import WebSocket from "ws";
 import type { DeviceRequest, JsonRpc } from "./protocol.js";
-import { assertSafeDeviceServiceUrl, resolveInsideRoot } from "./security.js";
+import { assertSafeDeviceServiceUrl, resolveInsideRoot, trustedSha256Matches } from "./security.js";
 
 const serviceUrl = process.env.WORKBRIDGE_SERVICE_URL ?? "";
 const token = process.env.WORKBRIDGE_DEVICE_TOKEN ?? "";
@@ -37,7 +37,7 @@ async function sha256(file: string) {
   return createHash("sha256").update(await readFile(file)).digest("hex");
 }
 
-if (await sha256(manifestPath) !== trustedManifestHash.toLowerCase()) throw new Error("WorkBridge manifest trust-anchor hash mismatch");\n\nconst nodeExe = resolveInsideRoot(installRoot, manifest.node_executable_relative);
+if (!trustedSha256Matches(await sha256(manifestPath), trustedManifestHash)) throw new Error("WorkBridge manifest trust-anchor hash mismatch");\n\nconst nodeExe = resolveInsideRoot(installRoot, manifest.node_executable_relative);
 const entrypoint = resolveInsideRoot(installRoot, manifest.entrypoint_relative);
 if (await sha256(nodeExe) !== manifest.node_sha256.toLowerCase()) throw new Error("packaged Node hash mismatch");
 if (await sha256(entrypoint) !== manifest.entrypoint_sha256.toLowerCase()) throw new Error("Desktop Commander entrypoint hash mismatch");
