@@ -28,3 +28,11 @@ test("completed upstream-context history is bounded", async () => {
   }
   assert.ok(o.list().length <= 1024);
 });
+
+test("parent execution lineage is preserved on the created event", () => {
+  const o = new WorkContextOrchestrator(32);
+  const parent = o.create();
+  const child = o.create(parent.id);
+  assert.equal(child.parentExecutionId, parent.id);
+  assert.equal(o.events.since(child.id, 0)[0]?.parentExecutionId, parent.id);
+});
