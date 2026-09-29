@@ -85,11 +85,12 @@ function connect() {
       return;
     }
     const bridgeId = localId++;
-    pendingOutbound.set(bridgeId, { requestId: message.requestId, originalId: message.payload.id });
+    const originalId = message.payload.id;
+    pendingOutbound.set(bridgeId, { requestId: message.requestId, originalId });
     child.stdin.write(JSON.stringify({ ...message.payload, id: bridgeId }) + LF, error => {
       if (!error) return;
       pendingOutbound.delete(bridgeId);
-      if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "response", requestId: message.requestId, payload: { jsonrpc: "2.0", id: message.payload?.id ?? null, error: { code: -32004, message: "qualified payload stdin write failed" } } }));
+      if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "response", requestId: message.requestId, payload: { jsonrpc: "2.0", id: originalId ?? null, error: { code: -32004, message: "qualified payload stdin write failed" } } }));
     });
   });
 
