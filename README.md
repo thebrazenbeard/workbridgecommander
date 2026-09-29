@@ -78,10 +78,10 @@ npm start
 On a workstation that already has the WorkBridge-qualified DesktopCommander duplicate installed, set `WORKBRIDGE_SERVICE_URL`, `WORKBRIDGE_DEVICE_ID`, `WORKBRIDGE_DEVICE_TOKEN`, and optionally `WORKBRIDGE_INSTALL_ROOT`, then run:
 
 ```powershell
-.\\scripts\\Start-WorkBridgeCommanderDevice.ps1 -ServiceUrl https://your-service.example -DeviceId lappy -DeviceToken <token>
+.\\scripts\\Start-WorkBridgeCommanderDevice.ps1 -ServiceUrl https://your-service.example -DeviceId lappy -DeviceToken <token> -TrustedManifestSha256 <sha256>
 ```
 
-The device agent verifies the packaged Node and DesktopCommander entrypoint SHA-256 values from `workbridge-desktop-commander.manifest.json` before launching it.
+The device agent first verifies `workbridge-desktop-commander.manifest.json` against the externally supplied `WORKBRIDGE_TRUSTED_MANIFEST_SHA256` trust anchor, then verifies the packaged Node and DesktopCommander entrypoint SHA-256 values before launch. Capture/provision the manifest digest at the trusted WorkBridge installation handoff; do not derive the trust anchor from an already-suspect install at startup.
 
 ## Capacity model
 
