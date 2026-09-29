@@ -18,7 +18,7 @@
     ]
   },
   "name": "workbridge-commander",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Operate authorized workstations through WorkBridge Commander and a WorkBridge-qualified Desktop Commander payload.",
   "author": {
     "name": "Patrick A. Sims"
