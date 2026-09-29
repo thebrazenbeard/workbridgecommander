@@ -11,11 +11,12 @@ AI client
    |
    | Streamable HTTP / MCP
    v
-WorkBridge Commander remote endpoint
+WorkBridge Commander remote MCP ingress
    |
    v
-VeraMesh secure MCP tunnel
+authenticated Commander device attachment
    |
+   +-- intended VeraMesh secure-transport integration boundary
    +-- optional VeraRelay routing/currentness layer
    |
    v
@@ -27,7 +28,7 @@ workstation
 
 The Commander path intentionally preserves the DesktopCommanderMCP workstation tool semantics qualified by WorkBridgeMCP. It is not the bounded native WorkBridge Go tool surface.
 
-WorkBridgeMCP owns the exact source pin, build/package procedure, integrity manifest, qualification cases, and workstation payload. VeraMesh owns authenticated remote transport. VeraRelay may participate in routing, but must not rename, filter, narrow, or reinterpret the workstation MCP tool surface.
+WorkBridgeMCP owns the exact source pin, build/package procedure, integrity manifest, qualification cases, and workstation payload. This repository currently implements the remote MCP ingress and authenticated workstation attachment bridge used by its executable qualification. VeraMesh is the intended secure transport/integration boundary where an exact adapter is available; source documentation must not pretend that a VeraMesh route is active merely because Commander contains a WebSocket bridge. VeraRelay may participate in routing, but must not rename, filter, narrow, or reinterpret the workstation MCP tool surface.
 
 ## Parallel work model
 
