@@ -69,7 +69,7 @@ try {
   if (-not $init.result.serverInfo.name) { throw "initialize failed through bridge" }
 
   $notice = @{ jsonrpc="2.0"; method="notifications/initialized"; params=@{} } | ConvertTo-Json -Depth 4
-  $null = Invoke-WebRequest -Method Post -Uri "http://127.0.0.1:18991/mcp" -Headers $headers -ContentType "application/json" -Body $notice
+  $null = Invoke-WebRequest -UseBasicParsing -Method Post -Uri "http://127.0.0.1:18991/mcp" -Headers $headers -ContentType "application/json" -Body $notice
 
   $listBody = @{ jsonrpc="2.0"; id=2; method="tools/list"; params=@{} } | ConvertTo-Json -Depth 4
   $listed = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:18991/mcp" -Headers $headers -ContentType "application/json" -Body $listBody
