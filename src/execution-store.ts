@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile, rename } from "node:fs/promises";
+import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import type { ExecutionEvent } from "./execution-events.js";
 
