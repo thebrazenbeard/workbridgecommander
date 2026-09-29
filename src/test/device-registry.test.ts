@@ -21,7 +21,9 @@ test("execution capacity is enforced for one device", async () => {
   assert.equal(device.queuedCount, 8);
 
   for (let i = 0; i < 12; i++) {
-    const wire = socket.sent[i];
+    let wire = socket.sent[i];
+    for (let spin = 0; !wire && spin < 100; spin++) { await new Promise(resolve => setTimeout(resolve, 1)); wire = socket.sent[i]; }
+    assert.ok(wire, `request ${i + 1} was not dispatched after a lane released`);
     device.accept({ type: "response", requestId: wire.requestId, payload: { jsonrpc: "2.0", id: i + 1, result: {} } });
     await new Promise(resolve => setTimeout(resolve, 1));
   }
