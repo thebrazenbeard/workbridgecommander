@@ -3,6 +3,10 @@ import type WebSocket from "ws";
 import type { DeviceRequest, DeviceResponse, JsonRpc } from "./protocol.js";
 import { LanePool } from "./lanes.js";
 
+export class DeviceEffectError extends Error {
+  constructor(message: string, readonly disposition: "FAILED" | "OUTCOME_UNKNOWN") { super(message); this.name = "DeviceEffectError"; }
+}
+
 type Pending = {
   resolve: (value: JsonRpc) => void;
   reject: (reason: Error) => void;
@@ -37,7 +41,7 @@ export class DeviceConnection {
       const requestId = randomUUID();
       const timer = setTimeout(() => {
         this.pending.delete(requestId);
-        reject(new Error("device request timed out"));
+        reject(new DeviceEffectError("device request timed out", "OUTCOME_UNKNOWN"));
       }, timeoutMs);
       this.pending.set(requestId, { resolve, reject, timer });
       const wire: DeviceRequest = { type: "request", requestId, payload };
@@ -45,7 +49,7 @@ export class DeviceConnection {
         if (!err) return;
         clearTimeout(timer);
         this.pending.delete(requestId);
-        reject(err);
+        reject(new DeviceEffectError(err.message, "OUTCOME_UNKNOWN"));
       });
     }));
   }
@@ -56,7 +60,7 @@ export class DeviceConnection {
   close(reason = "device disconnected") {
     for (const [id, p] of this.pending) {
       clearTimeout(p.timer);
-      p.reject(new Error(reason));
+      p.reject(new DeviceEffectError(reason, "OUTCOME_UNKNOWN"));
       this.pending.delete(id);
     }
   }
