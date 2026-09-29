@@ -27,3 +27,13 @@ test("recent effect evidence is bounded and newest first", () => {
   assert.equal(ledger.recent(1).length, 1);
   assert.throws(() => ledger.recent(0), /1\.\.1000/);
 });
+
+test("effect ledger evicts oldest records at its retention bound", () => {
+  const ledger = new EffectLedger(2);
+  ledger.create("a", "dev", 1);
+  ledger.create("b", "dev", 1);
+  ledger.create("c", "dev", 1);
+  assert.equal(ledger.get("a"), undefined);
+  assert.equal(ledger.get("b")?.requestId, "b");
+  assert.equal(ledger.get("c")?.requestId, "c");
+});
