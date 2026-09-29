@@ -16,7 +16,7 @@ const sampler = (async () => {
       const h = await r.json();
       maxActive = Math.max(maxActive, Number(h.executionActive ?? 0));
       maxQueued = Math.max(maxQueued, Number(h.executionQueued ?? 0));
-      if (h.executionCapacityPerDevice !== 8 || h.logicCapacity !== 64) {
+      if (h.executionCapacityPerDevice !== 8 || h.upstreamContextCapacity !== 64) {
         capacityMismatch = true;
       }
     } catch {}
