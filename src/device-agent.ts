@@ -16,7 +16,8 @@ const installRoot = process.env.WORKBRIDGE_INSTALL_ROOT ?? (process.platform ===
 if (!serviceUrl || !token || !deviceId) throw new Error("WORKBRIDGE_SERVICE_URL, WORKBRIDGE_DEVICE_TOKEN and WORKBRIDGE_DEVICE_ID are required");
 
 const manifestPath = path.join(installRoot, "workbridge-desktop-commander.manifest.json");
-const manifestText = (await readFile(manifestPath, "utf8")).replace(/^\\uFEFF/, "");\nconst manifest = JSON.parse(manifestText) as {
+const manifestText = (await readFile(manifestPath, "utf8")).replace(/^\uFEFF/, "");
+const manifest = JSON.parse(manifestText) as {
   schema: string;
   upstream_commit: string;
   upstream_version: string;
