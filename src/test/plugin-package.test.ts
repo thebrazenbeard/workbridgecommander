@@ -33,7 +33,7 @@ test("Secure MCP Tunnel profile keeps Commander private and secrets external", a
   assert.equal(profile.includes("sk-"), false);
   assert.equal(profile.includes("Bearer "), false);
 
-  assert.match(launcher, /WORKBRIDGE_TUNNEL_AUTHORIZATION/);
+  assert.match(launcher, /CONTROL_PLANE_TUNNEL_ID/);\n  assert.match(launcher, /CONTROL_PLANE_API_KEY/);\n  assert.match(launcher, /MCP_EXTRA_HEADERS/);\n  assert.match(launcher, /Authorization: Bearer/);
   assert.match(launcher, /doctor --profile-file/);
   assert.match(launcher, /run --profile-file/);
 });
