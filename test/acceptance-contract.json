@@ -39,7 +39,7 @@
     },
     {
       "id": "WBC-07",
-      "requirement": "A logic lane must bind an explicit device before workstation effect dispatch.",
+      "requirement": "An upstream work context must bind an explicit device before workstation effect dispatch.",
       "automated": true
     },
     {
