@@ -1,0 +1,12 @@
+services:
+  commander:
+    build: .
+    ports:
+      - "8787:8787"
+    environment:
+      PORT: "8787"
+      HOST: "0.0.0.0"
+      WORKBRIDGE_CLIENT_TOKEN: "${WORKBRIDGE_CLIENT_TOKEN}"
+      WORKBRIDGE_DEVICE_TOKEN: "${WORKBRIDGE_DEVICE_TOKEN}"
+      WORKBRIDGE_DEFAULT_DEVICE: "${WORKBRIDGE_DEFAULT_DEVICE:-lappy}"
+    restart: unless-stopped
