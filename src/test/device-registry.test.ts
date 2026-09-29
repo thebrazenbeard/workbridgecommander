@@ -29,3 +29,17 @@ test("execution capacity is enforced for one device", async () => {
   assert.equal(device.activeCount, 0);
   assert.equal(device.queuedCount, 0);
 });
+
+test("disconnect rejects in-flight requests and a replacement does not replay them", async () => {
+  const firstSocket = new FakeSocket();
+  const first = new DeviceConnection("fake", firstSocket as any, 4);
+  const pending = first.request({ jsonrpc: "2.0", id: 99, method: "tools/list" }, 5000);
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(firstSocket.sent.length, 1);
+  first.close("lost");
+  await assert.rejects(pending, /lost/);
+
+  const replacementSocket = new FakeSocket();
+  new DeviceConnection("fake", replacementSocket as any, 4);
+  assert.equal(replacementSocket.sent.length, 0);
+});
