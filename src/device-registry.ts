@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type WebSocket from "ws";
 import type { DeviceRequest, DeviceResponse, JsonRpc } from "./protocol.js";
-import { LanePool, EXECUTION_LANES } from "./lanes.js";
+import { LanePool } from "./lanes.js";
 
 type Pending = {
   resolve: (value: JsonRpc) => void;
@@ -10,10 +10,10 @@ type Pending = {
 };
 
 export class DeviceConnection {
-  readonly execution = new LanePool(EXECUTION_LANES);
+  readonly execution: LanePool;
   private pending = new Map<string, Pending>();
 
-  constructor(readonly id: string, readonly socket: WebSocket) {}
+  constructor(readonly id: string, readonly socket: WebSocket, executionCapacity: number) {\n    this.execution = new LanePool(executionCapacity);\n  }
 
   accept(message: DeviceResponse) {
     const p = this.pending.get(message.requestId);
