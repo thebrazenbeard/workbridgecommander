@@ -13,7 +13,8 @@ try {
   git checkout --detach FETCH_HEAD
   if ($LASTEXITCODE -ne 0) { throw "checkout failed" }
   if ((git rev-parse HEAD).Trim() -ne "550a0b3e31da18b7cf25e87ed840e3d953b6da42") { throw "upstream head mismatch" }
-  npm ci --ignore-scripts --no-audit --no-fund\n  if ($LASTEXITCODE -ne 0) { throw "DesktopCommander npm ci failed" }
+  npm ci --ignore-scripts --no-audit --no-fund
+  if ($LASTEXITCODE -ne 0) { throw "DesktopCommander npm ci failed" }
   npm rebuild "@vscode/ripgrep"
   if ($LASTEXITCODE -ne 0) { throw "ripgrep rebuild failed" }
   npm run build
@@ -29,7 +30,8 @@ try {
     upstream_repository = "https://github.com/wonderwhy-er/DesktopCommanderMCP.git"
     upstream_commit = "550a0b3e31da18b7cf25e87ed840e3d953b6da42"
     upstream_version = "0.2.51"
-    node_executable_relative = "workbridge-runtime\node.exe"
+    node_executable_relative = "workbridge-runtime
+ode.exe"
     node_sha256 = (Get-FileHash -Algorithm SHA256 (Join-Path $runtime "node.exe")).Hash.ToLowerInvariant()
     entrypoint_relative = "dist\index.js"
     entrypoint_sha256 = (Get-FileHash -Algorithm SHA256 (Join-Path $dc "dist\index.js")).Hash.ToLowerInvariant()
@@ -45,7 +47,8 @@ try {
   $env:WORKBRIDGE_DEFAULT_DEVICE = "qualification"
   $env:WORKBRIDGE_SERVICE_URL = "http://127.0.0.1:18991"
   $env:WORKBRIDGE_DEVICE_ID = "qualification"
-  $env:WORKBRIDGE_INSTALL_ROOT = $dc\n  $env:WORKBRIDGE_TRUSTED_MANIFEST_SHA256 = (Get-FileHash -Algorithm SHA256 (Join-Path $dc "workbridge-desktop-commander.manifest.json")).Hash.ToLowerInvariant()
+  $env:WORKBRIDGE_INSTALL_ROOT = $dc
+  $env:WORKBRIDGE_TRUSTED_MANIFEST_SHA256 = (Get-FileHash -Algorithm SHA256 (Join-Path $dc "workbridge-desktop-commander.manifest.json")).Hash.ToLowerInvariant()
 
   $server = Start-Process node -ArgumentList "dist/server.js" -PassThru -NoNewWindow
   for ($i=0; $i -lt 40; $i++) {
