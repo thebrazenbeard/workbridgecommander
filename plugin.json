@@ -3,10 +3,21 @@
   "name": "workbridge-commander",
   "version": "0.1.0",
   "description": "Operate authorized workstations through WorkBridge Commander and a WorkBridge-qualified Desktop Commander payload.",
-  "author": { "name": "Patrick A. Sims" },
+  "author": {
+    "name": "Patrick A. Sims"
+  },
   "repository": "https://github.com/thebrazenbeard/workbridgecommander",
   "license": "SEE LICENSE IN LICENSE",
-  "keywords": ["mcp","remote","workstation","terminal","filesystem","automation","workbridge","desktop-commander"],
+  "keywords": [
+    "mcp",
+    "remote",
+    "workstation",
+    "terminal",
+    "filesystem",
+    "automation",
+    "workbridge",
+    "desktop-commander"
+  ],
   "extensions": {
     "com.openai": {
       "interface": {
@@ -30,6 +41,5 @@
         ]
       }
     }
-  },
-  "mcpServers": "./.mcp.json"
+  }
 }
