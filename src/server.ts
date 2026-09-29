@@ -2,7 +2,7 @@ import http from "node:http";
 import { WebSocketServer } from "ws";
 import { bearerAuthorized, tokenAuthorized } from "./auth.js";
 import { DeviceConnection, DeviceEffectError, DeviceRegistry } from "./device-registry.js";
-import { LogicOrchestrator } from "./orchestrator.js";
+import { WorkContextOrchestrator } from "./orchestrator.js";
 import type { DeviceHello, DeviceResponse, JsonRpc } from "./protocol.js";
 import { isJsonRpc, isNotification } from "./protocol.js";
 import { capacityConfig, qualificationStatus } from "./config.js";
@@ -25,7 +25,7 @@ if (!clientToken || !deviceToken) throw new Error("WORKBRIDGE_CLIENT_TOKEN and W
 
 const registry = new DeviceRegistry();
 const eventStore = process.env.WORKBRIDGE_EXECUTION_EVENT_FILE ? new JsonlExecutionEventStore(process.env.WORKBRIDGE_EXECUTION_EVENT_FILE) : undefined;
-const logic = new LogicOrchestrator(capacity.upstreamContexts, eventStore);
+const logic = new WorkContextOrchestrator(capacity.upstreamContexts, eventStore);
 const resourceGate = new ResourceKeyGate();
 const effects = new EffectLedger();
 
