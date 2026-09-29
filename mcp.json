@@ -1,8 +1,4 @@
 {
-  "mcpServers": {
-    "workbridge_commander": {
-      "type": "streamable-http",
-      "url": "https://REPLACE-WITH-DEPLOYED-WORKBRIDGE-COMMANDER-ENDPOINT/mcp"
-    }
-  }
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {}
 }

@@ -55,11 +55,97 @@ const child = spawn(nodeExe, manifest.mcp_args, {
 
 const LF = String.fromCharCode(10);
 let buffer = "";
-const pendingOutbound = new Map<string | number, { requestId: string; originalId: JsonRpc["id"] }>();
 let localId = 1;
 let ws: WebSocket | undefined;
 let reconnectAttempt = 0;
 let stopped = false;
+
+const pendingOutbound = new Map<string | number, { requestId: string; originalId: JsonRpc["id"] }>();
+const pendingInternal = new Map<string | number, {
+  resolve: (value: JsonRpc) => void;
+  reject: (reason: Error) => void;
+  timer: NodeJS.Timeout;
+}>();
+
+function writeChild(payload: JsonRpc, timeoutMs = 30_000): Promise<JsonRpc> {
+  return new Promise((resolve, reject) => {
+    const id = localId++;
+    const timer = setTimeout(() => {
+      pendingInternal.delete(id);
+      reject(new Error("qualified payload request timed out"));
+    }, timeoutMs);
+    pendingInternal.set(id, { resolve, reject, timer });
+    child.stdin.write(JSON.stringify({ ...payload, id }) + LF, error => {
+      if (!error) return;
+      clearTimeout(timer);
+      pendingInternal.delete(id);
+      reject(error);
+    });
+  });
+}
+
+function notifyChild(payload: JsonRpc): Promise<void> {
+  return new Promise((resolve, reject) => {
+    child.stdin.write(JSON.stringify(payload) + LF, error => error ? reject(error) : resolve());
+  });
+}
+
+child.stdout.on("data", chunk => {
+  buffer += chunk.toString();
+  const lines = buffer.split(LF);
+  buffer = lines.pop() ?? "";
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    let payload: JsonRpc;
+    try { payload = JSON.parse(line); } catch { continue; }
+    if (payload.id === undefined) continue;
+
+    const internal = pendingInternal.get(payload.id as string | number);
+    if (internal) {
+      clearTimeout(internal.timer);
+      pendingInternal.delete(payload.id as string | number);
+      internal.resolve(payload);
+      continue;
+    }
+
+    const marker = pendingOutbound.get(payload.id as string | number);
+    if (!marker) continue;
+    pendingOutbound.delete(payload.id as string | number);
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "response", requestId: marker.requestId, payload: { ...payload, id: marker.originalId } }));
+    }
+  }
+});
+
+child.on("exit", code => {
+  stopped = true;
+  for (const pending of pendingInternal.values()) {
+    clearTimeout(pending.timer);
+    pending.reject(new Error("Desktop Commander exited during internal request"));
+  }
+  pendingInternal.clear();
+  if (ws?.readyState === WebSocket.OPEN) ws.close(1011, "desktop commander exited");
+  console.error(JSON.stringify({ status: "desktop-commander-exited", code }));
+  process.exit(code ?? 1);
+});
+
+const initResponse = await writeChild({
+  jsonrpc: "2.0",
+  method: "initialize",
+  params: {
+    protocolVersion: "2025-06-18",
+    capabilities: {},
+    clientInfo: { name: "workbridge-commander-device-agent", version: "0.1.0" }
+  }
+}, 60_000);
+
+if (initResponse.error) throw new Error(`Desktop Commander initialize failed: ${initResponse.error.message}`);
+if (!initResponse.result || typeof initResponse.result !== "object" || Array.isArray(initResponse.result)) {
+  throw new Error("Desktop Commander initialize returned invalid result");
+}
+const downstreamInitializeResult = initResponse.result as Record<string, unknown>;
+await notifyChild({ jsonrpc: "2.0", method: "notifications/initialized", params: {} });
 
 function connect() {
   const url = new URL(serviceUrl);
@@ -71,7 +157,12 @@ function connect() {
 
   socket.on("open", () => {
     reconnectAttempt = 0;
-    socket.send(JSON.stringify({ type: "hello", deviceId, token }));
+    socket.send(JSON.stringify({
+      type: "hello",
+      deviceId,
+      token,
+      initializeResult: downstreamInitializeResult
+    }));
   });
 
   socket.on("message", raw => {
@@ -90,42 +181,30 @@ function connect() {
     child.stdin.write(JSON.stringify({ ...message.payload, id: bridgeId }) + LF, error => {
       if (!error) return;
       pendingOutbound.delete(bridgeId);
-      if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "response", requestId: message.requestId, payload: { jsonrpc: "2.0", id: originalId ?? null, error: { code: -32004, message: "qualified payload stdin write failed" } } }));
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: "response",
+          requestId: message.requestId,
+          payload: {
+            jsonrpc: "2.0",
+            id: originalId ?? null,
+            error: { code: -32004, message: "qualified payload stdin write failed" }
+          }
+        }));
+      }
     });
   });
 
   socket.on("error", error => console.error(JSON.stringify({ status: "device-websocket-error", message: error.message })));
   socket.on("close", () => {
     if (stopped) return;
-    for (const marker of pendingOutbound.values()) console.error(JSON.stringify({ status: "request-outcome-unknown-after-disconnect", requestId: marker.requestId }));
+    for (const marker of pendingOutbound.values()) {
+      console.error(JSON.stringify({ status: "request-outcome-unknown-after-disconnect", requestId: marker.requestId }));
+    }
     pendingOutbound.clear();
     const delay = Math.min(30_000, 1_000 * (2 ** Math.min(reconnectAttempt++, 5)));
     setTimeout(connect, delay);
   });
 }
-
-child.stdout.on("data", chunk => {
-  buffer += chunk.toString();
-  const lines = buffer.split(LF);
-  buffer = lines.pop() ?? "";
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line) continue;
-    let payload: JsonRpc;
-    try { payload = JSON.parse(line); } catch { continue; }
-    if (payload.id === undefined) continue;
-    const marker = pendingOutbound.get(payload.id as string | number);
-    if (!marker) continue;
-    pendingOutbound.delete(payload.id as string | number);
-    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "response", requestId: marker.requestId, payload: { ...payload, id: marker.originalId } }));
-  }
-});
-
-child.on("exit", code => {
-  stopped = true;
-  if (ws?.readyState === WebSocket.OPEN) ws.close(1011, "desktop commander exited");
-  console.error(JSON.stringify({ status: "desktop-commander-exited", code }));
-  process.exit(code ?? 1);
-});
 
 connect();

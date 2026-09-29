@@ -39,6 +39,29 @@ function rpcError(id: JsonRpc["id"], code: number, message: string): JsonRpc {
   return { jsonrpc: "2.0", id: id ?? null, error: { code, message } };
 }
 
+function localInitializeResponse(payload: JsonRpc, device: DeviceConnection): JsonRpc {
+  const downstream = device.initializeResult;
+  const requested = payload.params && typeof payload.params === "object" && !Array.isArray(payload.params)
+    ? (payload.params as Record<string, unknown>).protocolVersion
+    : undefined;
+  const protocolVersion = typeof downstream.protocolVersion === "string"
+    ? downstream.protocolVersion
+    : (typeof requested === "string" ? requested : "2025-06-18");
+  const capabilities = downstream.capabilities && typeof downstream.capabilities === "object"
+    ? downstream.capabilities
+    : {};
+  return {
+    jsonrpc: "2.0",
+    id: payload.id ?? null,
+    result: {
+      ...downstream,
+      protocolVersion,
+      capabilities,
+      serverInfo: { name: "workbridge-commander", version: "0.1.0" }
+    }
+  };
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/effects") {
     if (!bearerAuthorized(req.headers.authorization, clientToken)) return json(res, 401, { error: "unauthorized" });
@@ -88,7 +111,18 @@ const server = http.createServer(async (req, res) => {
   if (!deviceId) return json(res, 503, rpcError(payload.id, -32001, "no workstation connected"));
   const resolved = registry.resolve(deviceId);
   if (!resolved) return json(res, 404, rpcError(payload.id, -32002, "requested workstation is not connected"));
-  const { generation } = resolved;
+  const { device, generation } = resolved;
+
+  if (payload.method === "initialize" && payload.id !== undefined) {
+    return json(res, 200, localInitializeResponse(payload, device));
+  }
+  if (payload.method === "notifications/initialized" && payload.id === undefined) {
+    res.writeHead(202, { "cache-control": "no-store" });
+    return res.end();
+  }
+  if (payload.method === "ping" && payload.id !== undefined) {
+    return json(res, 200, { jsonrpc: "2.0", id: payload.id ?? null, result: {} });
+  }
 
   try {
     const parentHeader = req.headers["x-workbridge-parent-execution"];
@@ -161,7 +195,10 @@ wss.on("connection", ws => {
       if (hello.deviceId.length < 1 || hello.deviceId.length > 128 || !/^[A-Za-z0-9._:-]+$/.test(hello.deviceId)) return ws.close(4003, "invalid device id");
       if (!tokenAuthorized(hello.token, deviceToken)) return ws.close(4004, "unauthorized");
       clearTimeout(helloTimer);
-      device = new DeviceConnection(hello.deviceId, ws, capacity.executionPerDevice);
+      const initializeResult = hello.initializeResult && typeof hello.initializeResult === "object" && !Array.isArray(hello.initializeResult)
+        ? hello.initializeResult
+        : {};
+      device = new DeviceConnection(hello.deviceId, ws, capacity.executionPerDevice, initializeResult);
       registry.attach(device);
       ws.send(JSON.stringify({ type: "ready", deviceId: device.id }));
       return;

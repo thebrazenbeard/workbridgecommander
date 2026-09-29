@@ -11,6 +11,7 @@ export type DeviceHello = {
   type: "hello";
   deviceId: string;
   token: string;
+  initializeResult?: Record<string, unknown>;
 };
 
 export type DeviceRequest = {
