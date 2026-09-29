@@ -33,7 +33,7 @@ export class DeviceConnection {
     return this.execution.run(() => new Promise<void>((resolve, reject) => {
       if (this.socket.readyState !== this.socket.OPEN) return reject(new DeviceEffectError("device socket is not open", "FAILED"));
       const wire: DeviceRequest = { type: "request", requestId: randomUUID(), payload };
-      this.socket.send(JSON.stringify(wire), err => err ? reject(err) : resolve());
+      this.socket.send(JSON.stringify(wire), err => err ? reject(new DeviceEffectError(err.message, "OUTCOME_UNKNOWN")) : resolve());
     }));
   }
 
