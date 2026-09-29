@@ -8,6 +8,7 @@ import { isJsonRpc, isNotification } from "./protocol.js";
 import { capacityConfig, qualificationStatus } from "./config.js";
 import { isOriginAllowed } from "./security.js";
 import { ResourceKeyGate } from "./resource-gate.js";
+import { JsonlExecutionEventStore } from "./execution-store.js";
 
 const port = Number(process.env.PORT ?? "8787");
 const host = process.env.HOST ?? "0.0.0.0";
@@ -21,7 +22,8 @@ const allowedOrigins = (process.env.WORKBRIDGE_ALLOWED_ORIGINS ?? "").split(",")
 if (!clientToken || !deviceToken) throw new Error("WORKBRIDGE_CLIENT_TOKEN and WORKBRIDGE_DEVICE_TOKEN are required");
 
 const registry = new DeviceRegistry();
-const logic = new LogicOrchestrator(capacity.logic);
+const eventStore = process.env.WORKBRIDGE_EXECUTION_EVENT_FILE ? new JsonlExecutionEventStore(process.env.WORKBRIDGE_EXECUTION_EVENT_FILE) : undefined;
+const logic = new LogicOrchestrator(capacity.logic, eventStore);
 const resourceGate = new ResourceKeyGate();
 
 function json(res: http.ServerResponse, status: number, body: unknown) {
