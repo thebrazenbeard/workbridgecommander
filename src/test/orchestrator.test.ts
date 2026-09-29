@@ -19,3 +19,12 @@ test("effect binding is explicit and device-scoped", () => {
   assert.equal(o.get(lane.id)?.effectDevice, "lappy");
   assert.equal(o.get(lane.id)?.state, "waiting-for-effect");
 });
+
+test("completed logic-lane history is bounded", async () => {
+  const o = new LogicOrchestrator(32);
+  for (let i = 0; i < 1030; i++) {
+    const lane = o.create();
+    await o.run(lane.id, async () => i);
+  }
+  assert.ok(o.list().length <= 1024);
+});
