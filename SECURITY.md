@@ -24,3 +24,4 @@ This repository currently contains source manifests and documentation only. It d
 Run remote workstation control only on machines and accounts you intend to expose to the connected AI client. Use OS-level isolation where the consequence of arbitrary command execution is unacceptable. Revocation must terminate future remote reachability rather than merely hide a device in UI.
 
 Never commit bearer tokens, API keys, device credentials, tunnel secrets, or private keys to this repository.
+\n## Network boundaries\n\nThe device agent refuses non-loopback plaintext service URLs. Remote operation therefore requires TLS termination. Browser-origin requests are denied unless their exact Origin appears in `WORKBRIDGE_ALLOWED_ORIGINS`; non-browser requests without Origin are allowed and still require bearer/device authentication. The device WebSocket applies a 2 MB message ceiling.\n
