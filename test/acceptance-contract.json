@@ -54,7 +54,8 @@
     {
       "id": "WBC-10",
       "requirement": "The WorkBridge manifest is authenticated against trusted provenance rather than trusted solely because it is local.",
-      "automated": false
+      "automated": true,
+      "note": "Device startup requires WORKBRIDGE_TRUSTED_MANIFEST_SHA256 and rejects malformed or mismatched SHA-256 trust anchors; exact-payload CI supplies the independently captured manifest digest."
     },
     {
       "id": "WBC-11",
@@ -70,7 +71,7 @@
       "id": "WBC-13",
       "requirement": "Windows device-agent operation is exercised on CI or equivalent clean Windows runner.",
       "automated": true,
-      "note": "Windows CI builds/tests the TypeScript implementation and parses the PowerShell launcher; full live workstation execution remains integration evidence."
+      "note": "Windows CI builds/tests the implementation, parses the launcher, builds the exact pinned DesktopCommander payload, launches the device bridge, and verifies MCP initialize/tools-list through it."
     },
     {
       "id": "WBC-14",
