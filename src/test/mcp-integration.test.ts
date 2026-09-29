@@ -44,6 +44,10 @@ test("official MCP client initializes and lists tools through a remote device", 
     const response = await fetch(`http://127.0.0.1:${port}/mcp`, { method: "POST", headers: { authorization: "Bearer client-test", "content-type": "application/json", "x-workbridge-device": "fake" }, body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized", params: {} }) });
     assert.equal(response.status, 202);
     assert.equal(await response.text(), "");
+    const badDevice = await fetch(`http://127.0.0.1:${port}/mcp`, { method: "POST", headers: { authorization: "Bearer client-test", "content-type": "application/json", "x-workbridge-device": "../bad device" }, body: JSON.stringify({ jsonrpc: "2.0", id: 91, method: "tools/list", params: {} }) });
+    assert.equal(badDevice.status, 400);
+    const badResource = await fetch(`http://127.0.0.1:${port}/mcp`, { method: "POST", headers: { authorization: "Bearer client-test", "content-type": "application/json", "x-workbridge-device": "fake", "x-workbridge-resource-key": "bad resource key" }, body: JSON.stringify({ jsonrpc: "2.0", id: 92, method: "tools/list", params: {} }) });
+    assert.equal(badResource.status, 400);
   } finally {
     await client.close().catch(() => {});
     ws.close();
