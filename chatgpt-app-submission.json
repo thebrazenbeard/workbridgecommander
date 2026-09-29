@@ -1,0 +1,392 @@
+{
+  "$schema": "https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json",
+  "schema_version": 1,
+  "app_info": {
+    "display_name": "WorkBridge Commander",
+    "subtitle": "Control your workstation",
+    "description": "WorkBridge Commander lets ChatGPT inspect and operate an explicitly authorized workstation through a WorkBridge-qualified Desktop Commander tool surface. It can read and edit files, search authorized paths, inspect and manage processes, run terminal commands, and continue interactive process sessions while preserving workstation selection and execution boundaries.",
+    "category": "PRODUCTIVITY"
+  },
+  "tools": {
+    "get_config": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Returns the current Desktop Commander configuration and environment metadata without changing it.",
+        "open_world_justification": "Reads only local server configuration and does not contact or modify external systems.",
+        "destructive_justification": "Does not delete, overwrite, revoke, terminate, or otherwise irreversibly change state."
+      }
+    },
+    "set_config_value": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Changes persisted Desktop Commander configuration values.",
+        "open_world_justification": "Changes local configuration only and does not directly modify public or third-party systems.",
+        "destructive_justification": "Can overwrite security- and access-relevant configuration such as allowed directories and blocked commands."
+      }
+    },
+    "read_file": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": true,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads authorized local files or retrieves URL content without modifying the source.",
+        "open_world_justification": "Can retrieve content from external URLs when URL mode is explicitly requested.",
+        "destructive_justification": "Does not write, overwrite, delete, or otherwise modify the file or URL resource."
+      }
+    },
+    "read_multiple_files": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads multiple authorized local files without modifying them.",
+        "open_world_justification": "Operates on the authorized local filesystem rather than external systems.",
+        "destructive_justification": "Does not alter, move, overwrite, or delete files."
+      }
+    },
+    "write_file": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Creates, appends to, or rewrites authorized local files.",
+        "open_world_justification": "Writes only to the authorized workstation filesystem and does not directly publish to external systems.",
+        "destructive_justification": "Rewrite mode can overwrite existing file contents."
+      }
+    },
+    "write_pdf": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Creates or modifies PDF content on the authorized workstation.",
+        "open_world_justification": "Writes only to the authorized local filesystem.",
+        "destructive_justification": "Can create replacement PDF output and perform page deletion or insertion operations."
+      }
+    },
+    "create_directory": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Creates a directory on the authorized workstation.",
+        "open_world_justification": "Changes only local filesystem state.",
+        "destructive_justification": "Creates or ensures a directory exists without deleting or overwriting existing content."
+      }
+    },
+    "list_directory": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Lists authorized directory contents without modifying them.",
+        "open_world_justification": "Operates only on the local authorized filesystem.",
+        "destructive_justification": "Does not modify filesystem state."
+      }
+    },
+    "move_file": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Moves or renames files and directories.",
+        "open_world_justification": "Changes only local authorized filesystem state.",
+        "destructive_justification": "Relocating or renaming a path changes durable filesystem state and can replace a destination depending on platform semantics."
+      }
+    },
+    "start_search": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Searches authorized local paths or file contents and only creates transient search-session state.",
+        "open_world_justification": "Does not access or modify external systems.",
+        "destructive_justification": "Does not modify searched files or directories."
+      }
+    },
+    "get_more_search_results": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads additional results from an existing search session.",
+        "open_world_justification": "Operates only on local search-session state.",
+        "destructive_justification": "Does not alter the searched files or other durable state."
+      }
+    },
+    "stop_search": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Stops a transient local search session.",
+        "open_world_justification": "Affects only local search execution state.",
+        "destructive_justification": "Does not delete user data or modify searched files."
+      }
+    },
+    "list_searches": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Lists active or recent local search sessions.",
+        "open_world_justification": "Reads only local search-session metadata.",
+        "destructive_justification": "Does not change search sessions or user data."
+      }
+    },
+    "get_file_info": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Returns metadata about an authorized local file or directory.",
+        "open_world_justification": "Reads only local filesystem metadata.",
+        "destructive_justification": "Does not modify the target path."
+      }
+    },
+    "edit_block": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Replaces content in text, spreadsheet, or DOCX files.",
+        "open_world_justification": "Edits only authorized local files.",
+        "destructive_justification": "Can overwrite selected durable file content."
+      }
+    },
+    "start_process": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": true,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Starts arbitrary authorized workstation commands or interactive processes that may have side effects.",
+        "open_world_justification": "A launched command can contact or modify external systems depending on the command and available credentials.",
+        "destructive_justification": "Arbitrary commands can modify or delete local state and can perform irreversible operations."
+      }
+    },
+    "read_process_output": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads buffered output and status from an existing process session.",
+        "open_world_justification": "Reading process output does not itself contact or modify external systems.",
+        "destructive_justification": "Does not send input, terminate the process, or modify user data."
+      }
+    },
+    "interact_with_process": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": true,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Sends commands or input to an existing interactive process.",
+        "open_world_justification": "The target process can contact or modify external systems depending on the input and available credentials.",
+        "destructive_justification": "Input to an arbitrary process can cause irreversible local or external effects."
+      }
+    },
+    "force_terminate": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Forcefully terminates a managed terminal session.",
+        "open_world_justification": "Acts on the local process session rather than directly on external systems.",
+        "destructive_justification": "Abrupt termination can discard unsaved process state."
+      }
+    },
+    "list_sessions": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Lists local managed terminal sessions and status.",
+        "open_world_justification": "Reads only local process-session metadata.",
+        "destructive_justification": "Does not start, alter, or terminate sessions."
+      }
+    },
+    "list_processes": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Lists running processes and resource information.",
+        "open_world_justification": "Reads only local operating-system process metadata.",
+        "destructive_justification": "Does not terminate or modify processes."
+      }
+    },
+    "kill_process": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Terminates a local process by PID.",
+        "open_world_justification": "Targets the local workstation process table.",
+        "destructive_justification": "Forcefully ending a process can discard unsaved state or interrupt active work."
+      }
+    },
+    "get_usage_stats": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Returns local Desktop Commander usage and performance statistics.",
+        "open_world_justification": "Reads only local usage metadata.",
+        "destructive_justification": "Does not change application or user state."
+      }
+    },
+    "get_recent_tool_calls": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads recent locally persisted Desktop Commander tool-call history.",
+        "open_world_justification": "Reads only local history data.",
+        "destructive_justification": "Does not change the history or replay prior effects."
+      }
+    },
+    "give_feedback_to_desktop_commander": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": true,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Opens an external feedback form in the workstation browser.",
+        "open_world_justification": "Interacts with an external feedback website by opening it for the user.",
+        "destructive_justification": "Opening the form does not itself submit feedback or delete or overwrite user data."
+      }
+    },
+    "get_prompts": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Retrieves a stored onboarding prompt by identifier.",
+        "open_world_justification": "Reads local bundled prompt content and does not modify external systems.",
+        "destructive_justification": "Does not modify user data or system state."
+      }
+    }
+  },
+  "test_cases": [
+    {
+      "description": "List an authorized workstation directory.",
+      "user_prompt": "Use WorkBridge Commander to list the files and folders in my authorized workspace directory.",
+      "file_attachment_urls": null,
+      "tools_triggered": "list_directory",
+      "expected_output": "Returns a structured listing of files and directories from the selected authorized workstation path.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Read an authorized local text file.",
+      "user_prompt": "Use WorkBridge Commander to read the README file in my authorized workspace and summarize what it says.",
+      "file_attachment_urls": null,
+      "tools_triggered": "read_file",
+      "expected_output": "Reads the requested authorized file and returns its contents for ChatGPT to summarize without modifying the file.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Search the workstation for matching files.",
+      "user_prompt": "Use WorkBridge Commander to find README.md files under my authorized workspace and show me the matches.",
+      "file_attachment_urls": null,
+      "tools_triggered": "start_search → get_more_search_results",
+      "expected_output": "Starts a bounded local file search and returns matching paths from the authorized workspace.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Create a small local review artifact.",
+      "user_prompt": "Use WorkBridge Commander to create a new text file named workbridge-review.txt in an authorized temporary folder containing the single line: WorkBridge Commander review.",
+      "file_attachment_urls": null,
+      "tools_triggered": "write_file",
+      "expected_output": "Creates the requested file on the selected authorized workstation and reports the completed write.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Run a bounded terminal command and inspect its result.",
+      "user_prompt": "Use WorkBridge Commander to run a harmless command that prints workbridge-review, then show me the command output.",
+      "file_attachment_urls": null,
+      "tools_triggered": "start_process → read_process_output",
+      "expected_output": "Runs the bounded command on the selected authorized workstation and returns the observed output containing workbridge-review.",
+      "expected_output_url": null
+    }
+  ],
+  "negative_test_cases": [
+    {
+      "description": "Do not trigger for a weather question that does not require workstation access.",
+      "user_prompt": "What is the weather in Chicago tomorrow?",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "WorkBridge Commander should not be invoked because the request does not require access to the user's workstation.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not trigger for general current-events research.",
+      "user_prompt": "Summarize the most important AI news from today.",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "WorkBridge Commander should not be invoked because the request is general web research rather than workstation work.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not trigger for a restaurant reservation request.",
+      "user_prompt": "Find and book a dinner reservation near me for tonight.",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "WorkBridge Commander should not be invoked because restaurant discovery and booking are outside its workstation-control workflow.",
+      "expected_output_url": null
+    }
+  ]
+}
