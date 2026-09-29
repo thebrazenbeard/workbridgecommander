@@ -74,21 +74,29 @@ const server = http.createServer(async (req, res) => {
   const requested = req.headers["x-workbridge-device"];
   const deviceId = (Array.isArray(requested) ? requested[0] : requested) || defaultDevice || registry.list()[0];
   if (!deviceId) return json(res, 503, rpcError(payload.id, -32001, "no workstation connected"));
-  const device = registry.get(deviceId);
-  if (!device) return json(res, 404, rpcError(payload.id, -32002, "requested workstation is not connected"));
+  const resolved = registry.resolve(deviceId);
+  if (!resolved) return json(res, 404, rpcError(payload.id, -32002, "requested workstation is not connected"));
+  const { generation } = resolved;
 
   try {
     const lane = logic.create();
     logic.bindEffect(lane.id, deviceId);
     const resourceHeader = req.headers["x-workbridge-resource-key"];
     const resourceKey = Array.isArray(resourceHeader) ? resourceHeader[0] : resourceHeader;
-    const dispatch = <T>(work: () => Promise<T>) => resourceKey ? resourceGate.run(resourceKey, work) : work();
+    const dispatch = <T>(work: (device: DeviceConnection) => Promise<T>) => {
+      const execute = () => {
+        const current = registry.getIfGeneration(deviceId, generation);
+        if (!current) throw new Error("workstation connection changed before effect dispatch");
+        return work(current);
+      };
+      return resourceKey ? resourceGate.run(resourceKey, execute) : execute();
+    };
     if (isNotification(payload)) {
-      await logic.run(lane.id, () => dispatch(() => device.notify(payload)));
+      await logic.run(lane.id, () => dispatch(device => device.notify(payload)));
       res.writeHead(202, { "cache-control": "no-store" });
       return res.end();
     }
-    const response = await logic.run(lane.id, () => dispatch(() => device.request(payload)));
+    const response = await logic.run(lane.id, () => dispatch(device => device.request(payload)));
     return json(res, 200, response);
   } catch (error) {
     return json(res, 502, rpcError(payload.id, -32003, error instanceof Error ? error.message : "device bridge failed"));
