@@ -47,7 +47,8 @@ const child = spawn(nodeExe, manifest.mcp_args, {
 });
 
 let buffer = "";
-const pendingOutbound: JsonRpc[] = [];
+const pendingOutbound = new Map<string | number, { requestId: string; originalId: JsonRpc["id"] }>();
+let localId = 1;
 let ws: WebSocket;
 
 function connect() {
@@ -83,11 +84,15 @@ child.stdout.on("data", chunk => {
     let payload: JsonRpc;
     try { payload = JSON.parse(line); } catch { continue; }
     if (payload.id === undefined) continue;
-    const idx = pendingOutbound.findIndex(p => p.id === payload.id);
-    if (idx < 0) continue;
-    const marker = pendingOutbound.splice(idx, 1)[0] as JsonRpc & { __workbridgeRequestId?: string };
-    if (ws.readyState === WebSocket.OPEN && marker.__workbridgeRequestId) {
-      ws.send(JSON.stringify({ type: "response", requestId: marker.__workbridgeRequestId, payload }));
+    const marker = pendingOutbound.get(payload.id as string | number);
+    if (!marker) continue;
+    pendingOutbound.delete(payload.id as string | number);
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: "response",
+        requestId: marker.requestId,
+        payload: { ...payload, id: marker.originalId }
+      }));
     }
   }
 });
