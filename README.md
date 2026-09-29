@@ -55,6 +55,30 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/SETUP.md](docs/SETUP.md)
 
 ## Current status
 
-Repository/plugin surface: source populated.
+Repository/plugin implementation: **implemented and CI-verified on the feature branch**. The repository now contains the remote MCP ingress service, authenticated device bridge, WorkBridge manifest/hash verification, 4-execution/32-logic lane enforcement, runnable device agent, Docker packaging, and tests.
 
-Remote service endpoint, OAuth/device pairing, production deployment, installation on a workstation, and live AI-to-workstation effects require separate implementation and runtime evidence. Placeholder endpoint values in manifests are intentionally explicit and must be replaced only when an actual service endpoint is deployed and verified.
+Production deployment, public endpoint assignment, workstation installation/activation, and live AI-to-workstation effects require separate runtime evidence. The service currently uses explicit bearer/device tokens; OAuth/device-code UX is not yet implemented. Placeholder endpoint values in manifests are intentionally explicit and must be replaced only when an actual service endpoint is deployed and verified.
+
+## Run the implementation
+
+Build and test:
+
+```bash
+npm install --ignore-scripts
+npm test
+```
+
+Run the remote service after setting `WORKBRIDGE_CLIENT_TOKEN` and `WORKBRIDGE_DEVICE_TOKEN`:
+
+```bash
+npm run build
+npm start
+```
+
+On a workstation that already has the WorkBridge-qualified DesktopCommander duplicate installed, set `WORKBRIDGE_SERVICE_URL`, `WORKBRIDGE_DEVICE_ID`, `WORKBRIDGE_DEVICE_TOKEN`, and optionally `WORKBRIDGE_INSTALL_ROOT`, then run:
+
+```powershell
+.\\scripts\\Start-WorkBridgeCommanderDevice.ps1 -ServiceUrl https://your-service.example -DeviceId lappy -DeviceToken <token>
+```
+
+The device agent verifies the packaged Node and DesktopCommander entrypoint SHA-256 values from `workbridge-desktop-commander.manifest.json` before launching it.
