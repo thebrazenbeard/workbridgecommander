@@ -11,15 +11,16 @@
     "test": "npm run build && node --test dist/test",
     "start": "node dist/server.js",
     "device": "node dist/device-agent.js",
-    "test:unit": "node --test dist/test"
+    "test:unit": "node --test dist/test",
+    "audit": "npm audit --audit-level=high"
   },
   "dependencies": {
-    "ws": "8.18.3"
+    "ws": "8.22.0"
   },
   "devDependencies": {
     "@types/node": "24.5.2",
     "@types/ws": "8.18.1",
     "typescript": "5.9.2",
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "1.30.1"
   }
 }
