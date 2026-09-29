@@ -20,9 +20,14 @@
   "name": "workbridge-commander",
   "version": "0.1.0",
   "description": "Operate authorized workstations through WorkBridge Commander and a WorkBridge-qualified Desktop Commander payload.",
-  "author": { "name": "Patrick A. Sims" },
-  "keywords": ["workbridge","mcp","workstation"],
+  "author": {
+    "name": "Patrick A. Sims"
+  },
+  "keywords": [
+    "workbridge",
+    "mcp",
+    "workstation"
+  ],
   "repository": "https://github.com/thebrazenbeard/workbridgecommander",
-  "skills": "./skills",
-  "mcpServers": "./.mcp.json"
+  "skills": "./skills"
 }
