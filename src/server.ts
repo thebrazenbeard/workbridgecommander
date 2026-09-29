@@ -40,6 +40,11 @@ function rpcError(id: JsonRpc["id"], code: number, message: string): JsonRpc {
 }
 
 const server = http.createServer(async (req, res) => {
+  if (req.method === "GET" && req.url === "/effects") {
+    if (!bearerAuthorized(req.headers.authorization, clientToken)) return json(res, 401, { error: "unauthorized" });
+    return json(res, 200, { effects: effects.recent() });
+  }
+
   if (req.method === "GET" && req.url === "/health") {
     return json(res, 200, {
       status: "ok",
