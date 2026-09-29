@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { DeviceConnection, DeviceEffectError } from "../device-registry.js";
 
 class FakeSocket {
+  OPEN = 1;
+  readyState = 1;
   sent: any[] = [];
   send(data: string, cb?: (error?: Error) => void) {
     this.sent.push(JSON.parse(data));
