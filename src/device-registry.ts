@@ -25,7 +25,7 @@ export class DeviceConnection {
     p.resolve(message.payload);
   }
 
-  request(payload: JsonRpc, timeoutMs = 120_000): Promise<JsonRpc> {
+  notify(payload: JsonRpc): Promise<void> {\n    return this.execution.run(() => new Promise<void>((resolve, reject) => {\n      const wire: DeviceRequest = { type: "request", requestId: randomUUID(), payload };\n      this.socket.send(JSON.stringify(wire), err => err ? reject(err) : resolve());\n    }));\n  }\n\n  request(payload: JsonRpc, timeoutMs = 120_000): Promise<JsonRpc> {
     return this.execution.run(() => new Promise<JsonRpc>((resolve, reject) => {
       const requestId = randomUUID();
       const timer = setTimeout(() => {
