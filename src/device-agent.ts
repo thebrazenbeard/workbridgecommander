@@ -79,12 +79,18 @@ function connect() {
     try { message = JSON.parse(raw.toString()); } catch { socket.close(4002, "invalid json"); return; }
     if (message.type !== "request" || typeof message.requestId !== "string" || !message.payload) return;
     if (message.payload.id === undefined) {
-      child.stdin.write(JSON.stringify(message.payload) + LF);
+      child.stdin.write(JSON.stringify(message.payload) + LF, error => {
+        if (error) console.error(JSON.stringify({ status: "notification-write-failed", requestId: message.requestId, message: error.message }));
+      });
       return;
     }
     const bridgeId = localId++;
     pendingOutbound.set(bridgeId, { requestId: message.requestId, originalId: message.payload.id });
-    child.stdin.write(JSON.stringify({ ...message.payload, id: bridgeId }) + LF);
+    child.stdin.write(JSON.stringify({ ...message.payload, id: bridgeId }) + LF, error => {
+      if (!error) return;
+      pendingOutbound.delete(bridgeId);
+      if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "response", requestId: message.requestId, payload: { jsonrpc: "2.0", id: message.payload?.id ?? null, error: { code: -32004, message: "qualified payload stdin write failed" } } }));
+    });
   });
 
   socket.on("error", error => console.error(JSON.stringify({ status: "device-websocket-error", message: error.message })));
