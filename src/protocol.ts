@@ -30,3 +30,7 @@ export type WireMessage = DeviceHello | DeviceRequest | DeviceResponse;
 export function isJsonRpc(value: unknown): value is JsonRpc {
   return !!value && typeof value === "object" && (value as JsonRpc).jsonrpc === "2.0";
 }
+
+export function isNotification(value: JsonRpc): boolean {
+  return typeof value.method === "string" && value.id === undefined;
+}
