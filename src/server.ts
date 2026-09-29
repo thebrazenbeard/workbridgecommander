@@ -139,6 +139,7 @@ server.on("upgrade", (req, socket, head) => {
 
 wss.on("connection", ws => {
   let device: DeviceConnection | undefined;
+  ws.on("error", error => console.error(JSON.stringify({ status: "device-socket-error", message: error.message })));
   let alive = true;
   ws.on("pong", () => { alive = true; });
   const heartbeat = setInterval(() => {
