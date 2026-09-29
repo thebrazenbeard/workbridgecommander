@@ -1,5 +1,5 @@
 {
-  "$schema": "https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json",
+  "$schema": "https://developers.openai.com/plugins/schemas/chatgpt-app-submission.v1.json",
   "schema_version": 1,
   "app_info": {
     "display_name": "WorkBridge Commander",
@@ -388,5 +388,172 @@
       "expected_output": "WorkBridge Commander should not be invoked because restaurant discovery and booking are outside its workstation-control workflow.",
       "expected_output_url": null
     }
-  ]
+  ],
+  "mcp_server": {
+    "connection_type": "TUNNEL",
+    "tunnel_id": "tunnel_6abc08e792448191bb33223bdba84c4d",
+    "server_url": null,
+    "authentication": {
+      "portal_selection": "Tunnel",
+      "external_user_auth": "NONE",
+      "local_commander_auth": "Bearer injected by tunnel-client at runtime",
+      "credentials_in_submission_json": false
+    },
+    "scan_tools": {
+      "expected_tool_count": 26,
+      "required_tools": [
+        "start_process",
+        "read_file",
+        "write_file",
+        "list_directory"
+      ],
+      "status": "SCAN_REQUIRED_IN_PORTAL"
+    },
+    "domain_verification": {
+      "required_for_current_tunnel_developer_mode": false,
+      "required_for_public_https_submission": true,
+      "challenge_base_url": null,
+      "status": "NOT_APPLICABLE_UNTIL_PUBLIC_HTTPS_ENDPOINT"
+    },
+    "public_submission": {
+      "stable_https_mcp_url": null,
+      "status": "NOT_YET_DEPLOYED"
+    }
+  },
+  "skills": [
+    {
+      "name": "workbridge-commander",
+      "source_path": "skills/workbridge-commander/SKILL.md",
+      "description": "Use when Patrick asks to operate a workstation through WorkBridge Commander, inspect or edit workstation files, run commands, manage processes, or continue workstation work through the WorkBridge-qualified Desktop Commander payload.",
+      "content": "# WorkBridge Commander\n\nUse the WorkBridge Commander MCP service as the transport. Do not substitute Lappy Desktop Commander, Remote Desktop Commander, VeraPort, or another connector merely because it can reach the same machine.\n\n## Runtime truth\n\n- Tool discovery is not proof of workstation attachment or authority.\n- A connected workstation is not proof that the WorkBridge-qualified payload is installed or selected.\n- Preserve workstation identity and connection generation across each effect.\n- Treat a post-dispatch timeout or disconnect as outcome unknown unless reconciled; never silently replay it.\n- Do not silently fail over an effect from one workstation to another.\n\n## Workstation operations\n\n- Prefer native Desktop Commander tools exposed by the qualified payload.\n- Establish current state before mutation.\n- Use the smallest coherent effect.\n- Verify file mutations by readback.\n- Verify process work from exit state and relevant output.\n- Use explicit workstation selection when more than one device is available.\n- Resource keys are scheduling hints, not authority grants.\n\n## Parallel work\n\n- Execution capacity and upstream work-context capacity are independent.\n- The qualification floors are at least 4 concurrent workstation effects per device and at least 32 upstream request contexts; they are not product ceilings.\n- Upstream contexts are scheduler/admission contexts, not model workers or reasoning agents.\n\n## Protected effects\n\nDo not merge or mutate canonical main, deploy/install/activate/cut over services, change credentials/permissions/trust, incur paid compute, destroy state, or publish private material without Patrick's explicit authority for that exact effect.\n\n## Verification\n\nBefore reporting completion, distinguish source state, installed state, selected route, runtime observation, and external effect. Never promote one into another without evidence."
+    }
+  ],
+  "prompts": [
+    {
+      "title": "Continue workstation work",
+      "prompt": "Use WorkBridge Commander to inspect the connected workstation and continue the active work."
+    },
+    {
+      "title": "Run and verify a command",
+      "prompt": "Run the requested command through WorkBridge Commander and verify the observed result."
+    },
+    {
+      "title": "Smallest authorized effect",
+      "prompt": "Use the smallest authorized workstation effect and verify mutations by readback."
+    }
+  ],
+  "testing": {
+    "positive_test_cases": [
+      {
+        "description": "List an authorized workstation directory.",
+        "user_prompt": "Use WorkBridge Commander to list the files and folders in my authorized workspace directory.",
+        "file_attachment_urls": null,
+        "tools_triggered": "list_directory",
+        "expected_output": "Returns a structured listing of files and directories from the selected authorized workstation path.",
+        "expected_output_url": null
+      },
+      {
+        "description": "Read an authorized local text file.",
+        "user_prompt": "Use WorkBridge Commander to read the README file in my authorized workspace and summarize what it says.",
+        "file_attachment_urls": null,
+        "tools_triggered": "read_file",
+        "expected_output": "Reads the requested authorized file and returns its contents for ChatGPT to summarize without modifying the file.",
+        "expected_output_url": null
+      },
+      {
+        "description": "Search the workstation for matching files.",
+        "user_prompt": "Use WorkBridge Commander to find README.md files under my authorized workspace and show me the matches.",
+        "file_attachment_urls": null,
+        "tools_triggered": "start_search → get_more_search_results",
+        "expected_output": "Starts a bounded local file search and returns matching paths from the authorized workspace.",
+        "expected_output_url": null
+      },
+      {
+        "description": "Create a small local review artifact.",
+        "user_prompt": "Use WorkBridge Commander to create a new text file named workbridge-review.txt in an authorized temporary folder containing the single line: WorkBridge Commander review.",
+        "file_attachment_urls": null,
+        "tools_triggered": "write_file",
+        "expected_output": "Creates the requested file on the selected authorized workstation and reports the completed write.",
+        "expected_output_url": null
+      },
+      {
+        "description": "Run a bounded terminal command and inspect its result.",
+        "user_prompt": "Use WorkBridge Commander to run a harmless command that prints workbridge-review, then show me the command output.",
+        "file_attachment_urls": null,
+        "tools_triggered": "start_process → read_process_output",
+        "expected_output": "Runs the bounded command on the selected authorized workstation and returns the observed output containing workbridge-review.",
+        "expected_output_url": null
+      }
+    ],
+    "negative_test_cases": [
+      {
+        "description": "Do not trigger for a weather question that does not require workstation access.",
+        "user_prompt": "What is the weather in Chicago tomorrow?",
+        "file_attachment_urls": null,
+        "tools_triggered": null,
+        "expected_output": "WorkBridge Commander should not be invoked because the request does not require access to the user's workstation.",
+        "expected_output_url": null
+      },
+      {
+        "description": "Do not trigger for general current-events research.",
+        "user_prompt": "Summarize the most important AI news from today.",
+        "file_attachment_urls": null,
+        "tools_triggered": null,
+        "expected_output": "WorkBridge Commander should not be invoked because the request is general web research rather than workstation work.",
+        "expected_output_url": null
+      },
+      {
+        "description": "Do not trigger for a restaurant reservation request.",
+        "user_prompt": "Find and book a dinner reservation near me for tonight.",
+        "file_attachment_urls": null,
+        "tools_triggered": null,
+        "expected_output": "WorkBridge Commander should not be invoked because restaurant discovery and booking are outside its workstation-control workflow.",
+        "expected_output_url": null
+      }
+    ],
+    "required_positive_count": 5,
+    "required_negative_count": 3
+  },
+  "global": {
+    "developer_identity": {
+      "name": "Patrick A. Sims",
+      "verification_status": "SELECT_VERIFIED_IDENTITY_IN_PORTAL"
+    },
+    "website_url": "https://github.com/thebrazenbeard/workbridgecommander",
+    "support_url": "https://github.com/thebrazenbeard/workbridgecommander/issues",
+    "privacy_policy_url": null,
+    "terms_of_service_url": null,
+    "country_availability": {
+      "countries": null,
+      "status": "REQUIRES_PORTAL_SELECTION"
+    }
+  },
+  "submit": {
+    "release_notes": "Initial WorkBridge Commander submission draft. Provides authorized workstation filesystem, search, process, and terminal workflows through a WorkBridge-qualified Desktop Commander MCP surface. Current developer testing uses OpenAI Secure MCP Tunnel; a stable public HTTPS MCP endpoint is not yet recorded in repository source.",
+    "reviewer_notes": "Scan Tools should expose the expected 26-tool Desktop Commander surface. No bearer token, API key, or workstation credential is embedded in this submission file.",
+    "policy_attestations": {
+      "listing_is_accurate": null,
+      "tool_annotations_are_accurate": null,
+      "skills_are_final": null,
+      "test_cases_are_reproducible": null,
+      "global_availability_is_ready": null
+    }
+  },
+  "_import_notes": {
+    "official_schema_support": [
+      "app_info",
+      "tools",
+      "test_cases",
+      "negative_test_cases"
+    ],
+    "best_effort_page_blocks": [
+      "mcp_server",
+      "skills",
+      "prompts",
+      "testing",
+      "global",
+      "submit"
+    ],
+    "note": "The current OpenAI schema permits additional properties, but the portal may ignore best-effort page blocks that are not yet documented as importable."
+  }
 }
