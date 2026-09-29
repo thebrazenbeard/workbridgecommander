@@ -29,12 +29,15 @@ jobs:
       - run: npm install --ignore-scripts
       - run: npm test
       - run: npm run audit
+      - name: Qualify exact DesktopCommander payload
+        shell: powershell
+        run: .\\scripts\\qualify-real-payload.ps1
       - name: Parse device launcher
         shell: powershell
         run: |
           $errors = $null
           [void][System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path '.\scripts\Start-WorkBridgeCommanderDevice.ps1'),
+            (Resolve-Path '.\\scripts\\Start-WorkBridgeCommanderDevice.ps1'),
             [ref]$null,
             [ref]$errors
           )
