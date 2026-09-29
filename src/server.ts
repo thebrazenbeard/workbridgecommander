@@ -84,6 +84,7 @@ const server = http.createServer(async (req, res) => {
 
   const requested = req.headers["x-workbridge-device"];
   const deviceId = (Array.isArray(requested) ? requested[0] : requested) || defaultDevice || registry.list()[0];
+  if (deviceId && (deviceId.length > 128 || !/^[A-Za-z0-9._:-]+$/.test(deviceId))) return json(res, 400, rpcError(payload.id, -32602, "invalid workstation id"));
   if (!deviceId) return json(res, 503, rpcError(payload.id, -32001, "no workstation connected"));
   const resolved = registry.resolve(deviceId);
   if (!resolved) return json(res, 404, rpcError(payload.id, -32002, "requested workstation is not connected"));
@@ -153,6 +154,7 @@ wss.on("connection", ws => {
     if (!device) {
       const hello = message as Partial<DeviceHello>;
       if (hello.type !== "hello" || typeof hello.deviceId !== "string" || typeof hello.token !== "string") return ws.close(4003, "hello required");
+      if (hello.deviceId.length < 1 || hello.deviceId.length > 128 || !/^[A-Za-z0-9._:-]+$/.test(hello.deviceId)) return ws.close(4003, "invalid device id");
       if (!tokenAuthorized(hello.token, deviceToken)) return ws.close(4004, "unauthorized");
       clearTimeout(helloTimer);
       device = new DeviceConnection(hello.deviceId, ws, capacity.executionPerDevice);
