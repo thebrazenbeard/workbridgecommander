@@ -32,9 +32,9 @@ try {
     upstream_version = "0.2.51"
     node_executable_relative = "workbridge-runtime/node.exe"
     node_sha256 = (Get-FileHash -Algorithm SHA256 (Join-Path $runtime "node.exe")).Hash.ToLowerInvariant()
-    entrypoint_relative = "dist\index.js"
+    entrypoint_relative = "dist/index.js"
     entrypoint_sha256 = (Get-FileHash -Algorithm SHA256 (Join-Path $dc "dist\index.js")).Hash.ToLowerInvariant()
-    mcp_args = @("dist\index.js", "--no-onboarding")
+    mcp_args = @("dist/index.js", "--no-onboarding")
     unrestricted_command_string_shell = $true
   }
   $manifestPath = Join-Path $dc "workbridge-desktop-commander.manifest.json"
