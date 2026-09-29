@@ -4,7 +4,7 @@ import { bearerAuthorized, tokenAuthorized } from "./auth.js";
 import { DeviceConnection, DeviceRegistry } from "./device-registry.js";
 import { LogicOrchestrator } from "./orchestrator.js";
 import type { DeviceHello, DeviceResponse, JsonRpc } from "./protocol.js";
-import { isJsonRpc } from "./protocol.js";
+import { isJsonRpc, isNotification } from "./protocol.js";
 import { capacityConfig, qualificationStatus } from "./config.js";
 
 const port = Number(process.env.PORT ?? "8787");
