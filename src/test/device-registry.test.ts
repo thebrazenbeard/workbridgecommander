@@ -56,3 +56,13 @@ test("disconnect classifies an already-dispatched request as outcome unknown", a
     error instanceof DeviceEffectError && error.disposition === "OUTCOME_UNKNOWN"
   );
 });
+
+test("closed socket before send is a known failed disposition", async () => {
+  const socket = new FakeSocket();
+  (socket as any).readyState = 3;
+  (socket as any).OPEN = 1;
+  const device = new DeviceConnection("fake", socket as any, 1);
+  await assert.rejects(device.request({ jsonrpc: "2.0", id: 7, method: "tools/list" }), (error: unknown) =>
+    error instanceof DeviceEffectError && error.disposition === "FAILED"
+  );
+});
