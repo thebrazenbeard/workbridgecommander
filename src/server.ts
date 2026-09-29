@@ -42,7 +42,8 @@ const server = http.createServer(async (req, res) => {
       qualification,
       logicActive: logic.activeCount,
       logicQueued: logic.queuedCount,
-      devices: registry.list().map(id => { const device = registry.get(id)!; return { id, executionActive: device.activeCount, executionQueued: device.queuedCount }; })
+      executionActive: registry.list().reduce((sum, id) => sum + (registry.get(id)?.activeCount ?? 0), 0),
+      executionQueued: registry.list().reduce((sum, id) => sum + (registry.get(id)?.queuedCount ?? 0), 0)
     });
   }
 
