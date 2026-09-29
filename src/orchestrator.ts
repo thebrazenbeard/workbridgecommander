@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { LanePool, LOGIC_LANES } from "./lanes.js";
+import { LanePool } from "./lanes.js";
 
 export type LogicLaneState = "queued" | "running" | "waiting-for-effect" | "completed" | "failed";
 
@@ -13,8 +13,8 @@ export type LogicLaneRecord = {
 };
 
 export class LogicOrchestrator {
-  private readonly pool = new LanePool(LOGIC_LANES);
-  private readonly records = new Map<string, LogicLaneRecord>();
+  private readonly pool: LanePool;
+  private readonly records = new Map<string, LogicLaneRecord>();\n\n  constructor(capacity: number) { this.pool = new LanePool(capacity); }
 
   create(): LogicLaneRecord {
     const record: LogicLaneRecord = { id: randomUUID(), state: "queued", createdAt: Date.now() };
