@@ -46,3 +46,10 @@ jobs:
             [ref]$errors
           )
           if ($errors.Count -gt 0) { $errors | Out-String | Write-Error; exit 1 }
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path '.\\scripts\\Start-WorkBridgeCommanderTunnel.ps1'),
+            [ref]$null,
+            [ref]$errors
+          )
+          if ($errors.Count -gt 0) { $errors | Out-String | Write-Error; exit 1 }
