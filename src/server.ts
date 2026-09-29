@@ -97,6 +97,13 @@ server.on("upgrade", (req, socket, head) => {
 
 wss.on("connection", ws => {
   let device: DeviceConnection | undefined;
+  let alive = true;
+  ws.on("pong", () => { alive = true; });
+  const heartbeat = setInterval(() => {
+    if (!alive) return ws.terminate();
+    alive = false;
+    ws.ping();
+  }, 30_000);
   const helloTimer = setTimeout(() => ws.close(4000, "hello timeout"), 10_000);
 
   ws.on("message", raw => {
@@ -117,6 +124,7 @@ wss.on("connection", ws => {
   });
 
   ws.on("close", () => {
+    clearInterval(heartbeat);
     clearTimeout(helloTimer);
     if (device) registry.detach(device);
   });
