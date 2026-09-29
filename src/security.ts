@@ -19,3 +19,7 @@ export function resolveInsideRoot(root: string, relative: string): string {
   if (rel.startsWith("..") || path.isAbsolute(rel)) throw new Error("manifest path escapes install root");
   return resolved;
 }
+
+export function trustedSha256Matches(actual: string, expected: string): boolean {
+  return /^[a-f0-9]{64}$/i.test(expected) && actual.toLowerCase() === expected.toLowerCase();
+}
