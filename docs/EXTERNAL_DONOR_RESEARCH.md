@@ -139,3 +139,40 @@ Useful patterns:
 - exponential backoff has explicit limit/factor/max duration.
 
 Adopt the layered-capacity vocabulary, not Kubernetes machinery. WorkBridge needs separate service logic capacity, device effect capacity, and optional resource-key concurrency. Retry must remain effect-safe: transport/errors may be retryable only when effect disposition is known, never simply because a request failed to return.
+
+
+## 2026-09-29 instrumentation and acquisition triage
+
+### microsoft/Qcodes
+
+Observed head: `ea03eb25055e6ca7ca0610294f9fc56324e13b19`. MIT.
+
+Useful pattern: connected instruments carry stable identity, parameters and snapshot/metadata rather than being represented only by a transport handle. WorkBridge applies this narrowly as a generation-bound device attachment descriptor. Qcodes is not a runtime dependency.
+
+### bluesky/bluesky
+
+Observed head: `8721c829d4a96054c89e6e4b98e4e11dc59b9782`. BSD-3-Clause.
+
+Highest-value donor in this batch. Its RunEngine separates pause/suspend/resume/stop/abort/halt and treats checkpoints/replayability as explicit execution semantics. WorkBridge adopts the underlying rule: transport loss after effect dispatch is `OUTCOME_UNKNOWN`, not an ordinary retryable failure; replay safety must be explicit.
+
+### PyMoDAQ/PyMoDAQ and intake/intake
+
+Observed PyMoDAQ head: `22ddc34bf02a33d33776456f47c0f5a8e77694a0` (MIT). Observed Intake head: `68a6d127f290df1e60c0c0c7c194bc507ec36b1e` (BSD-2-Clause).
+
+Both reinforce separation of device/source discovery metadata from acquisition/execution implementation. WorkBridge keeps its device registry descriptive and generation-bound rather than turning registry records into a workflow engine.
+
+### BerriAI/litellm
+
+Observed head: `b0e62571e4b8f3414883faca22bc1a19e23d09b0` (MIT).
+
+Its routing, health, cooldown and fallback machinery is useful mainly as a negative boundary. Workstations are not interchangeable model providers: Commander must not silently fail over an effect from one machine to another unless an operation explicitly establishes that substitution as safe.
+
+### LeechCore, WinPmem, LiME, and Scada-LTS
+
+Observed heads respectively: `824e88a7dfed4a8f1c37c2e83fdf98f89470d12a`, `e7c80927f52a6b86338f7453c2139c10a9384f5a`, `48a925fc4191d36e9f9a91d60e5ebd5d87a3614c`, and `cfca7d9a7c8b151a9b542d282e8b914a356aaf42`.
+
+These are not direct Commander implementation donors. Memory acquisition/forensics reinforce provenance and exact target identity; SCADA reinforces explicit device status and control-state visibility. Their domain machinery does not belong in Commander. No source from these projects is imported.
+
+## Triage conclusion
+
+The donor set narrows Commander rather than expanding it. The surviving concepts are generation-bound device identity, explicit effect disposition, replay safety, layered capacity/backpressure, structured evidence, and end-to-end qualification. General DAG execution, agent memory, model-provider fallback, SCADA abstractions, and acquisition-framework machinery remain outside the Commander core.
