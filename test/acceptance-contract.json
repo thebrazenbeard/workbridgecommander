@@ -23,17 +23,17 @@
     },
     {
       "id": "WBC-04",
-      "requirement": "At most four workstation-effect requests execute concurrently per device.",
+      "requirement": "Runtime execution capacity is configurable and qualification demonstrates at least 4 concurrent workstation-effect lanes per device.",
       "automated": true
     },
     {
       "id": "WBC-05",
-      "requirement": "Execution-lane concurrency is demonstrated against a real WorkBridge-qualified DesktopCommander payload, not inferred from a queue unit test.",
+      "requirement": "Execution concurrency at or above the 4-lane qualification floor is demonstrated against a real WorkBridge-qualified DesktopCommander payload, not inferred from a queue unit test.",
       "automated": false
     },
     {
       "id": "WBC-06",
-      "requirement": "Up to 32 independently identified logic work contexts may be active; logic identity is distinct from effect authority.",
+      "requirement": "Runtime logic capacity is configurable and qualification demonstrates at least 32 independently identified logic work contexts; logic identity is distinct from effect authority.",
       "automated": true
     },
     {
@@ -78,4 +78,4 @@
       "automated": false
     }
   ]
-}
+}\n
