@@ -4,10 +4,13 @@ $dc = Join-Path $root "DesktopCommanderMCP"
 $server = $null
 $device = $null
 try {
-  git clone --no-tags https://github.com/wonderwhy-er/DesktopCommanderMCP.git $dc
-  if ($LASTEXITCODE -ne 0) { throw "clone failed" }
+  git init $dc
+  if ($LASTEXITCODE -ne 0) { throw "git init failed" }
   Push-Location $dc
-  git checkout --detach 550a0b3e31da18b7cf25e87ed840e3d953b6da42
+  git remote add origin https://github.com/wonderwhy-er/DesktopCommanderMCP.git
+  git fetch --depth 1 origin 550a0b3e31da18b7cf25e87ed840e3d953b6da42
+  if ($LASTEXITCODE -ne 0) { throw "pinned upstream fetch failed" }
+  git checkout --detach FETCH_HEAD
   if ($LASTEXITCODE -ne 0) { throw "checkout failed" }
   if ((git rev-parse HEAD).Trim() -ne "550a0b3e31da18b7cf25e87ed840e3d953b6da42") { throw "upstream head mismatch" }
   npm ci --ignore-scripts
