@@ -29,11 +29,12 @@
     {
       "id": "WBC-05",
       "requirement": "Execution concurrency at or above the 4-lane qualification floor is demonstrated against a real WorkBridge-qualified DesktopCommander payload, not inferred from a queue unit test.",
-      "automated": false
+      "automated": true,
+      "note": "Windows CI runs eight concurrent real start_process calls through the exact pinned DesktopCommander payload under an 8-execution/64-upstream-context profile and requires at least four simultaneous effects to be observed."
     },
     {
       "id": "WBC-06",
-      "requirement": "Runtime logic capacity is configurable and qualification demonstrates at least 32 independently identified logic work contexts; logic identity is distinct from effect authority.",
+      "requirement": "Runtime upstream-context capacity is configurable and qualification configures at least 32 independently identified upstream work contexts; these are scheduler contexts, not model workers, and identity is distinct from effect authority.",
       "automated": true
     },
     {
@@ -71,12 +72,17 @@
       "id": "WBC-13",
       "requirement": "Windows device-agent operation is exercised on CI or equivalent clean Windows runner.",
       "automated": true,
-      "note": "Windows CI builds/tests the implementation, parses the launcher, builds the exact pinned DesktopCommander payload, launches the device bridge, and verifies MCP initialize/tools-list through it."
+      "note": "Windows CI builds/tests the implementation, parses the launcher, builds the exact pinned DesktopCommander payload, launches the device bridge, verifies MCP initialize/tools-list, and executes concurrent real start_process calls through the bridge."
     },
     {
       "id": "WBC-14",
       "requirement": "Production endpoint, OAuth/device pairing, deployment, and activation remain separate effect claims.",
       "automated": false
+    },
+    {
+      "id": "WBC-15",
+      "requirement": "A stale device generation is rejected before dispatch, while timeout or disconnect after dispatch is classified OUTCOME_UNKNOWN and is never silently replayed.",
+      "automated": true
     }
   ]
 }
