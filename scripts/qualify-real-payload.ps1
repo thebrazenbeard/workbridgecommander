@@ -51,7 +51,7 @@ try {
   $env:WORKBRIDGE_SERVICE_URL = "http://127.0.0.1:18991"
   $env:WORKBRIDGE_DEVICE_ID = "qualification"
   $env:WORKBRIDGE_EXECUTION_CAPACITY = "8"
-  $env:WORKBRIDGE_LOGIC_CAPACITY = "64"
+  $env:WORKBRIDGE_UPSTREAM_CONTEXT_CAPACITY = "64"
   $env:WORKBRIDGE_INSTALL_ROOT = $dc
   $env:WORKBRIDGE_TRUSTED_MANIFEST_SHA256 = (Get-FileHash -Algorithm SHA256 (Join-Path $dc "workbridge-desktop-commander.manifest.json")).Hash.ToLowerInvariant()
 
