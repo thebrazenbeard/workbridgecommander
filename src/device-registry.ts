@@ -50,7 +50,7 @@ export class DeviceConnection {
     }));
   }
 
-  close(reason = "device disconnected") {
+  get activeCount() { return this.execution.activeCount; }\n  get queuedCount() { return this.execution.queuedCount; }\n\n  close(reason = "device disconnected") {
     for (const [id, p] of this.pending) {
       clearTimeout(p.timer);
       p.reject(new Error(reason));
