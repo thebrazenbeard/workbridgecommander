@@ -1,0 +1,21 @@
+{
+  "name": "@thebrazenbeard/workbridge-commander",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=20"},
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/test/*.test.js",
+    "start": "node dist/server.js",
+    "device": "node dist/device-agent.js"
+  },
+  "dependencies": {
+    "ws": "8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.5.2",
+    "@types/ws": "8.18.1",
+    "typescript": "5.9.2"
+  }
+}
