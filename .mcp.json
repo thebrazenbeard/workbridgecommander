@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "workbridge-commander": {
+      "type": "http",
+      "url": "https://REPLACE-WITH-DEPLOYED-WORKBRIDGE-COMMANDER-ENDPOINT/mcp"
+    }
+  }
+}
