@@ -99,7 +99,7 @@ export class DeviceRegistry {
   describe(id: string): DeviceAttachment | undefined {
     const device = this.devices.get(id);
     if (!device) return undefined;
-    return { deviceId: id, generation: this.generations.get(id) ?? 0, connectedAt: this.connectedAt.get(id) ?? 0, executionCapacity: device.execution.capacity };
+    return { deviceId: id, generation: this.generations.get(id) ?? 0, connectedAt: this.connectedAt.get(id) ?? 0, executionCapacity: device.execution.limit };
   }
   list() { return [...this.devices.keys()].sort(); }
 }
