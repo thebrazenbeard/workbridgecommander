@@ -1,21 +1,35 @@
 {
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "workbridge-commander",
-  "description": "Reach a workstation from MCP-capable AI clients through the WorkBridge Commander remote transport, using a WorkBridge-qualified Desktop Commander payload.",
   "version": "0.1.0",
-  "author": {
-    "name": "Patrick A. Sims"
-  },
+  "description": "Operate authorized workstations through WorkBridge Commander and a WorkBridge-qualified Desktop Commander payload.",
+  "author": { "name": "Patrick A. Sims" },
   "repository": "https://github.com/thebrazenbeard/workbridgecommander",
   "license": "SEE LICENSE IN LICENSE",
-  "keywords": [
-    "mcp",
-    "remote",
-    "workstation",
-    "terminal",
-    "filesystem",
-    "automation",
-    "workbridge",
-    "desktop-commander"
-  ],
-  "mcpServers": ".mcp.json"
+  "keywords": ["mcp","remote","workstation","terminal","filesystem","automation","workbridge","desktop-commander"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "WorkBridge Commander",
+        "shortDescription": "WorkBridge-powered workstation control",
+        "longDescription": "Connects ChatGPT and Codex to the WorkBridge Commander remote MCP service, which routes authenticated requests to WorkBridge-qualified Desktop Commander payloads on explicitly selected workstations.",
+        "developerName": "Patrick A. Sims",
+        "category": "Productivity",
+        "capabilities": [
+          "Inspect and edit authorized workstation files",
+          "Search authorized workstation paths",
+          "Run and interact with workstation processes",
+          "Inspect and manage workstation processes",
+          "Route work to an explicitly selected connected workstation",
+          "Preserve WorkBridge effect disposition and connection-generation safety"
+        ],
+        "defaultPrompt": [
+          "Use WorkBridge Commander to inspect the connected workstation and continue the active work.",
+          "Run the requested command through WorkBridge Commander and verify the observed result.",
+          "Use the smallest authorized workstation effect and verify mutations by readback."
+        ]
+      }
+    }
+  },
+  "mcpServers": "./.mcp.json"
 }
