@@ -19,7 +19,7 @@
     {
       "id": "WBC-03",
       "requirement": "A connected device is selected explicitly or by configured default.",
-      "automated": false
+      "automated": true
     },
     {
       "id": "WBC-04",
@@ -63,8 +63,8 @@
     },
     {
       "id": "WBC-12",
-      "requirement": "Real MCP initialize/tools-list/call round trip succeeds through remote ingress and device bridge.",
-      "automated": false
+      "requirement": "Official MCP SDK initialize/tools-list round trip succeeds through remote ingress and device bridge; real WorkBridge-qualified payload execution is qualified separately.",
+      "automated": true
     },
     {
       "id": "WBC-13",
