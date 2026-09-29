@@ -4,17 +4,17 @@ import { readFile } from "node:fs/promises";
 
 test("plugin package is the initial WorkBridge Commander plugin and is intentionally unbound", async () => {
   const plugin = JSON.parse(await readFile("plugin.json", "utf8"));
-  const mcp = JSON.parse(await readFile("mcp.json", "utf8"));
+  const mcp = JSON.parse(await readFile("mcp.json", "utf8"));\n  const legacyMcp = JSON.parse(await readFile(".mcp.json", "utf8"));
   const codex = JSON.parse(await readFile(".codex-plugin/plugin.json", "utf8"));
 
   assert.equal(plugin.$schema, "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json");
   assert.equal(plugin.name, "workbridge-commander");
-  assert.equal(plugin.version, "0.1.1");
+  assert.equal(plugin.version, "0.1.2");
   assert.equal(plugin.extensions?.["com.openai"]?.interface?.displayName, "WorkBridge Commander");
   assert.equal("mcpServers" in plugin, false);
 
   assert.equal(mcp.$schema, "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json");
-  assert.deepEqual(mcp.mcpServers, {});
+  assert.deepEqual(mcp.mcpServers, {});\n  assert.deepEqual(legacyMcp, mcp);
 
   assert.equal(codex.name, "workbridge-commander");
   assert.equal(codex.interface?.displayName, "WorkBridge Commander");
