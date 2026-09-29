@@ -86,6 +86,6 @@ The device agent first verifies `workbridge-desktop-commander.manifest.json` aga
 
 ## Capacity model
 
-The values 4 execution lanes per device and 32 logic lanes are qualification floors and default capacities, not product ceilings. Operators can raise them with `WORKBRIDGE_EXECUTION_CAPACITY` and `WORKBRIDGE_LOGIC_CAPACITY`. The health response reports configured capacity and whether it meets the qualification floors. Lower values are permitted for constrained hosts but must report that they do not meet the standard qualification target.
+The values 4 execution lanes per device and 32 logic lanes are qualification floors and default capacities, not product ceilings. Operators can raise them with `WORKBRIDGE_EXECUTION_CAPACITY` and `WORKBRIDGE_UPSTREAM_CONTEXT_CAPACITY`. The health response reports configured capacity and whether it meets the qualification floors. Lower values are permitted for constrained hosts but must report that they do not meet the standard qualification target.
 
 External donor research and the exact boundary between adopted patterns and runtime dependencies are recorded in `docs/EXTERNAL_DONOR_RESEARCH.md`.
