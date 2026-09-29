@@ -17,3 +17,23 @@ jobs:
           node-version: "20"
       - run: npm install --ignore-scripts
       - run: npm test
+
+  windows-build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install --ignore-scripts
+      - run: npm test
+      - name: Parse device launcher
+        shell: powershell
+        run: |
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path '.\scripts\Start-WorkBridgeCommanderDevice.ps1'),
+            [ref]$null,
+            [ref]$errors
+          )
+          if ($errors.Count -gt 0) { $errors | Out-String | Write-Error; exit 1 }
