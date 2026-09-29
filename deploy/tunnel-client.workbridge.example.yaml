@@ -1,13 +1,8 @@
 config_version: 1
-control_plane:
-  tunnel_id: env:OPENAI_MCP_TUNNEL_ID
-  api_key: env:OPENAI_TUNNEL_RUNTIME_API_KEY
 mcp:
   server_urls:
     - channel: main
       url: http://127.0.0.1:8787/mcp
-  extra_headers:
-    Authorization: env:WORKBRIDGE_TUNNEL_AUTHORIZATION
   startup_wait_timeout: 60s
   max_concurrent_requests: 32
 health:
