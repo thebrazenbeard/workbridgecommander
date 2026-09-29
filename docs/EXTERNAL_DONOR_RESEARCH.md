@@ -98,3 +98,44 @@ Adopt this as qualification/review discipline. It is not a runtime dependency.
 6. Event buffering/replay and new subscription registration must not have a gap that can lose events.
 7. Structured execution events should be suitable for later observability/evaluation export without requiring an observability vendor at runtime.
 8. Qualification reviews must compare the architecture contract to concrete enforcement code and exercise overlap, reordering, disconnect, replacement, and stale-identity cases.
+
+
+### windmill-labs/windmill
+
+Observed head: `cf5c49c3dca2201f739fb872d68bcd6c0c7665f7`. Repository metadata does not assert a standard SPDX license, so direct code reuse is not admitted without license verification.
+
+Useful patterns:
+- explicit concurrency limits stored with executable/workflow definitions;
+- concurrency keys that serialize only work sharing a resource identity;
+- worker grouping/versioning and queue priority;
+- resume/cancel state modeled separately from completion;
+- observability for concurrency pressure rather than treating queueing as invisible.
+
+Adopt the resource-keyed concurrency concept: WorkBridge should eventually support an optional concurrency key above raw device capacity so callers can prevent overlapping effects against the same shell/session/file/resource without globally reducing device parallelism.
+
+### rocketride-org/rocketride-server
+
+Observed head: `5a21c9c784ebee8f09cff59cb4acfcf5dbe77465`. MIT.
+
+Useful patterns:
+- scheduler identity is a tuple of resource owners, not a display label;
+- re-read authoritative deployment state at fire time so stale queued work does not override disable/pause/change;
+- reserve an overlap slot before asynchronous dispatch to close check-then-act races;
+- explicit placeholder state during dispatch startup;
+- manual and scheduled paths share the same overlap guard;
+- failed start releases only the placeholder, not a later valid run token.
+
+Adopt the authority-reconciliation and reservation pattern for WorkBridge effect admission. A queued request must be revalidated against the currently connected device generation before dispatch; a "device ID existed when queued" observation is not sufficient authority.
+
+### argoproj/argo-workflows
+
+Observed head: `dadd69141c570fa678f7d51ee6decfe3fa77f109`. Apache-2.0.
+
+Useful patterns:
+- layered parallelism limits (global, namespace/resource scope, task/workflow scope);
+- priority-aware queueing;
+- semaphores/mutexes in addition to raw parallelism;
+- retry policy distinguishes failure, error, and transient error;
+- exponential backoff has explicit limit/factor/max duration.
+
+Adopt the layered-capacity vocabulary, not Kubernetes machinery. WorkBridge needs separate service logic capacity, device effect capacity, and optional resource-key concurrency. Retry must remain effect-safe: transport/errors may be retryable only when effect disposition is known, never simply because a request failed to return.
