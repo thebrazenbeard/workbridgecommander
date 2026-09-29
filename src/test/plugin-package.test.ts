@@ -21,3 +21,19 @@ test("plugin package is the initial WorkBridge Commander plugin and is intention
   assert.equal("mcpServers" in codex, false);
   assert.equal(JSON.stringify({ plugin, mcp, codex }).includes("V3"), false);
 });
+
+test("Secure MCP Tunnel profile keeps Commander private and secrets external", async () => {
+  const profile = await readFile("deploy/tunnel-client.workbridge.example.yaml", "utf8");
+  const launcher = await readFile("scripts/Start-WorkBridgeCommanderTunnel.ps1", "utf8");
+
+  assert.match(profile, /url: http:\/\/127\.0\.0\.1:8787\/mcp/);
+  assert.match(profile, /Authorization: env:WORKBRIDGE_TUNNEL_AUTHORIZATION/);
+  assert.match(profile, /tunnel_id: env:OPENAI_MCP_TUNNEL_ID/);
+  assert.match(profile, /api_key: env:OPENAI_TUNNEL_RUNTIME_API_KEY/);
+  assert.equal(profile.includes("sk-"), false);
+  assert.equal(profile.includes("Bearer "), false);
+
+  assert.match(launcher, /WORKBRIDGE_TUNNEL_AUTHORIZATION/);
+  assert.match(launcher, /doctor --profile-file/);
+  assert.match(launcher, /run --profile-file/);
+});
