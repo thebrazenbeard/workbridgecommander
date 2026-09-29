@@ -5,7 +5,7 @@ import { DeviceConnection, DeviceRegistry } from "./device-registry.js";
 import { LogicOrchestrator } from "./orchestrator.js";
 import type { DeviceHello, DeviceResponse, JsonRpc } from "./protocol.js";
 import { isJsonRpc, isNotification } from "./protocol.js";
-import { capacityConfig, qualificationStatus } from "./config.js";
+import { capacityConfig, qualificationStatus } from "./config.js";\nimport { isOriginAllowed } from "./security.js";
 
 const port = Number(process.env.PORT ?? "8787");
 const host = process.env.HOST ?? "0.0.0.0";
@@ -13,7 +13,7 @@ const clientToken = process.env.WORKBRIDGE_CLIENT_TOKEN ?? "";
 const deviceToken = process.env.WORKBRIDGE_DEVICE_TOKEN ?? "";
 const defaultDevice = process.env.WORKBRIDGE_DEFAULT_DEVICE ?? "";
 const capacity = capacityConfig();
-const qualification = qualificationStatus(capacity);
+const qualification = qualificationStatus(capacity);\nconst allowedOrigins = (process.env.WORKBRIDGE_ALLOWED_ORIGINS ?? "").split(",").map(v => v.trim()).filter(Boolean);
 
 if (!clientToken || !deviceToken) {
   throw new Error("WORKBRIDGE_CLIENT_TOKEN and WORKBRIDGE_DEVICE_TOKEN are required");
@@ -40,7 +40,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/health") {
     return json(res, 200, {
       status: "ok",
-      devices: registry.list(),
+      connectedDeviceCount: registry.list().length,
       executionLaneLimitPerDevice: 4,
       logicLaneLimit: 32,
       logicActive: logic.activeCount,
@@ -86,9 +86,9 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-const wss = new WebSocketServer({ noServer: true });
+const wss = new WebSocketServer({ noServer: true, maxPayload: 2_000_000 });
 server.on("upgrade", (req, socket, head) => {
-  if (req.url !== "/device") return socket.destroy();
+  if (req.url !== "/device") return socket.destroy();\n  if (!isOriginAllowed(req.headers.origin, allowedOrigins)) return socket.destroy();
   wss.handleUpgrade(req, socket, head, ws => wss.emit("connection", ws, req));
 });
 
