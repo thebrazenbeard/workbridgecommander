@@ -8,12 +8,12 @@ import { assertSafeDeviceServiceUrl, resolveInsideRoot } from "./security.js";
 
 const serviceUrl = process.env.WORKBRIDGE_SERVICE_URL ?? "";
 const token = process.env.WORKBRIDGE_DEVICE_TOKEN ?? "";
-const deviceId = process.env.WORKBRIDGE_DEVICE_ID ?? "";
+const deviceId = process.env.WORKBRIDGE_DEVICE_ID ?? "";\nconst trustedManifestHash = process.env.WORKBRIDGE_TRUSTED_MANIFEST_SHA256 ?? "";
 const installRoot = process.env.WORKBRIDGE_INSTALL_ROOT ?? (process.platform === "win32"
   ? "C:\\ProgramData\\WorkBridgeMCP\\DesktopCommanderMCP"
   : "/opt/workbridge/DesktopCommanderMCP");
 
-if (!serviceUrl || !token || !deviceId) throw new Error("WORKBRIDGE_SERVICE_URL, WORKBRIDGE_DEVICE_TOKEN and WORKBRIDGE_DEVICE_ID are required");
+if (!serviceUrl || !token || !deviceId || !trustedManifestHash) throw new Error("WORKBRIDGE_SERVICE_URL, WORKBRIDGE_DEVICE_TOKEN, WORKBRIDGE_DEVICE_ID and WORKBRIDGE_TRUSTED_MANIFEST_SHA256 are required");
 
 const manifestPath = path.join(installRoot, "workbridge-desktop-commander.manifest.json");
 const rawManifest = await readFile(manifestPath, "utf8");
@@ -37,7 +37,7 @@ async function sha256(file: string) {
   return createHash("sha256").update(await readFile(file)).digest("hex");
 }
 
-const nodeExe = resolveInsideRoot(installRoot, manifest.node_executable_relative);
+if (await sha256(manifestPath) !== trustedManifestHash.toLowerCase()) throw new Error("WorkBridge manifest trust-anchor hash mismatch");\n\nconst nodeExe = resolveInsideRoot(installRoot, manifest.node_executable_relative);
 const entrypoint = resolveInsideRoot(installRoot, manifest.entrypoint_relative);
 if (await sha256(nodeExe) !== manifest.node_sha256.toLowerCase()) throw new Error("packaged Node hash mismatch");
 if (await sha256(entrypoint) !== manifest.entrypoint_sha256.toLowerCase()) throw new Error("Desktop Commander entrypoint hash mismatch");
