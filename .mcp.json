@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "workbridge-commander": {
-      "type": "http",
+    "workbridge_commander": {
+      "type": "streamable-http",
       "url": "https://REPLACE-WITH-DEPLOYED-WORKBRIDGE-COMMANDER-ENDPOINT/mcp"
     }
   }
