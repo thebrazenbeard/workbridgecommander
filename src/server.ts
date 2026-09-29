@@ -41,7 +41,8 @@ const server = http.createServer(async (req, res) => {
       logicCapacity: capacity.logic,
       qualification,
       logicActive: logic.activeCount,
-      logicQueued: logic.queuedCount,\n      devices: registry.list().map(id => { const device = registry.get(id)!; return { id, executionActive: device.activeCount, executionQueued: device.queuedCount }; })
+      logicQueued: logic.queuedCount,
+      devices: registry.list().map(id => { const device = registry.get(id)!; return { id, executionActive: device.activeCount, executionQueued: device.queuedCount }; })
     });
   }
 
