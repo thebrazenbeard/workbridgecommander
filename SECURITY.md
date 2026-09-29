@@ -10,7 +10,7 @@ The remote layer therefore must provide strong authentication, explicit device a
 
 ## No false deployment claims
 
-This repository currently contains source manifests and documentation only. It does not prove that:
+This repository contains a source-level remote MCP service and device-agent implementation plus qualification harnesses. Source and CI qualification do not prove that:
 
 - a public MCP endpoint exists;
 - authentication or device pairing is deployed;
