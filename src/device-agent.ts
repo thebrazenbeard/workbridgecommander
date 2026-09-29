@@ -50,6 +50,8 @@ let buffer = "";
 const pendingOutbound = new Map<string | number, { requestId: string; originalId: JsonRpc["id"] }>();
 let localId = 1;
 let ws: WebSocket;
+let reconnectAttempt = 0;
+let stopped = false;
 
 function connect() {
   const url = new URL(serviceUrl);
@@ -58,6 +60,7 @@ function connect() {
   ws = new WebSocket(url);
 
   ws.on("open", () => {
+    reconnectAttempt = 0;
     ws.send(JSON.stringify({ type: "hello", deviceId, token }));
   });
 
@@ -82,7 +85,13 @@ function connect() {
   });
 
   ws.on("close", () => {
-    setTimeout(connect, 2000);
+    if (stopped) return;
+    for (const marker of pendingOutbound.values()) {
+      console.error(JSON.stringify({ status: "request-abandoned-on-disconnect", requestId: marker.requestId }));
+    }
+    pendingOutbound.clear();
+    const delay = Math.min(30_000, 1_000 * (2 ** Math.min(reconnectAttempt++, 5)));
+    setTimeout(connect, delay);
   });
 }
 
@@ -110,6 +119,8 @@ child.stdout.on("data", chunk => {
 });
 
 child.on("exit", code => {
+  stopped = true;
+  if (ws?.readyState === WebSocket.OPEN) ws.close(1011, "desktop commander exited");
   console.error(JSON.stringify({ status: "desktop-commander-exited", code }));
   process.exit(code ?? 1);
 });
