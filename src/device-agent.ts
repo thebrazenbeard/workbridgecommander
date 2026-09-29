@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import WebSocket from "ws";
-import type { DeviceRequest, JsonRpc } from "./protocol.js";
+import type { DeviceRequest, JsonRpc } from "./protocol.js";\nimport { assertSafeDeviceServiceUrl, resolveInsideRoot } from "./security.js";
 
 const serviceUrl = process.env.WORKBRIDGE_SERVICE_URL ?? "";
 const token = process.env.WORKBRIDGE_DEVICE_TOKEN ?? "";
@@ -54,7 +54,7 @@ let reconnectAttempt = 0;
 let stopped = false;
 
 function connect() {
-  const url = new URL(serviceUrl);
+  const url = new URL(serviceUrl);\n  assertSafeDeviceServiceUrl(url);
   url.pathname = "/device";
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   ws = new WebSocket(url);
@@ -69,13 +69,6 @@ function connect() {
     if (message.type === "request" && typeof message.requestId === "string" && message.payload) {
       if (message.payload.id === undefined) {
         child.stdin.write(JSON.stringify(message.payload) + "\n");
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            type: "response",
-            requestId: message.requestId,
-            payload: { jsonrpc: "2.0", result: null }
-          }));
-        }
         return;
       }
       const bridgeId = localId++;
@@ -84,7 +77,7 @@ function connect() {
     }
   });
 
-  ws.on("close", () => {
+  ws.on("error", error => {\n    console.error(JSON.stringify({ status: "device-websocket-error", message: error.message }));\n  });\n\n  ws.on("close", () => {
     if (stopped) return;
     for (const marker of pendingOutbound.values()) {
       console.error(JSON.stringify({ status: "request-abandoned-on-disconnect", requestId: marker.requestId }));
