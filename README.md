@@ -2,7 +2,7 @@
 
 **Remote workstation control for AI clients, built on the WorkBridge stack.**
 
-WorkBridge Commander is the public plugin and connector surface for reaching a workstation through a remote MCP connection, with a product-level orchestration target of **at least 4 parallel execution lanes by qualification default and at least 32 parallel logic lanes by qualification default**. It follows the same repository split used by Desktop Commander: the workstation implementation and packaging live in the implementation repository; this repository carries the remote-plugin manifests, architecture contract, setup guidance, security boundary, and provenance.
+WorkBridge Commander is the public plugin and connector surface for reaching a workstation through a remote MCP connection, with a product-level orchestration target of **at least 4 parallel workstation-effect lanes by qualification default and at least 32 parallel upstream request contexts by qualification default**. It follows the same repository split used by Desktop Commander: the workstation implementation and packaging live in the implementation repository; this repository carries the remote-plugin manifests, architecture contract, setup guidance, security boundary, and provenance.
 
 ## Architecture
 
@@ -56,7 +56,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/SETUP.md](docs/SETUP.md)
 
 ## Current status
 
-Repository/plugin implementation: **implemented and CI-verified on the feature branch**. The repository now contains the remote MCP ingress service, authenticated device bridge, WorkBridge manifest/hash verification, configurable execution/upstream-work concurrency with 4/32 qualification floors, runnable device agent, Docker packaging, and tests.
+Repository implementation: **merged to `main` and CI-qualified at its recorded qualification baseline**. The ChatGPT plugin package is maintained in this repository and must be bound to a real deployed Commander MCP endpoint before live use. The repository now contains the remote MCP ingress service, authenticated device bridge, WorkBridge manifest/hash verification, configurable execution/upstream-work concurrency with 4/32 qualification floors, runnable device agent, Docker packaging, and tests.
 
 Production deployment, public endpoint assignment, workstation installation/activation, and live AI-to-workstation effects require separate runtime evidence. The service currently uses explicit bearer/device tokens; OAuth/device-code UX is not yet implemented. Placeholder endpoint values in manifests are intentionally explicit and must be replaced only when an actual service endpoint is deployed and verified.
 
@@ -86,6 +86,6 @@ The device agent first verifies `workbridge-desktop-commander.manifest.json` aga
 
 ## Capacity model
 
-The values 4 execution lanes per device and 32 logic lanes are qualification floors and default capacities, not product ceilings. Operators can raise them with `WORKBRIDGE_EXECUTION_CAPACITY` and `WORKBRIDGE_UPSTREAM_CONTEXT_CAPACITY`. The health response reports configured capacity and whether it meets the qualification floors. Lower values are permitted for constrained hosts but must report that they do not meet the standard qualification target.
+The values 4 execution lanes per device and 32 upstream request contexts are qualification floors and default capacities, not product ceilings. Operators can raise them with `WORKBRIDGE_EXECUTION_CAPACITY` and `WORKBRIDGE_UPSTREAM_CONTEXT_CAPACITY`. The health response reports configured capacity and whether it meets the qualification floors. Lower values are permitted for constrained hosts but must report that they do not meet the standard qualification target.
 
 External donor research and the exact boundary between adopted patterns and runtime dependencies are recorded in `docs/EXTERNAL_DONOR_RESEARCH.md`.
