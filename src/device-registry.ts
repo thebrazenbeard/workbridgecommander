@@ -31,6 +31,7 @@ export class DeviceConnection {
 
   notify(payload: JsonRpc): Promise<void> {
     return this.execution.run(() => new Promise<void>((resolve, reject) => {
+      if (this.socket.readyState !== this.socket.OPEN) return reject(new DeviceEffectError("device socket is not open", "FAILED"));
       const wire: DeviceRequest = { type: "request", requestId: randomUUID(), payload };
       this.socket.send(JSON.stringify(wire), err => err ? reject(err) : resolve());
     }));
@@ -38,6 +39,7 @@ export class DeviceConnection {
 
   request(payload: JsonRpc, timeoutMs = 120_000): Promise<JsonRpc> {
     return this.execution.run(() => new Promise<JsonRpc>((resolve, reject) => {
+      if (this.socket.readyState !== this.socket.OPEN) return reject(new DeviceEffectError("device socket is not open", "FAILED"));
       const requestId = randomUUID();
       const timer = setTimeout(() => {
         this.pending.delete(requestId);
