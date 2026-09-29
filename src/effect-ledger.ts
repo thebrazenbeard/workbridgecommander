@@ -33,4 +33,8 @@ export class EffectLedger {
   }
 
   get(requestId: string) { return this.records.get(requestId); }
+  recent(limit = 100) {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1000) throw new Error("effect ledger limit must be 1..1000");
+    return [...this.records.values()].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, limit);
+  }
 }
