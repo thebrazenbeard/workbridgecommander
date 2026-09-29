@@ -2,17 +2,17 @@
 
 Status: PRE-DEPLOYMENT PLUGIN DOCUMENTATION
 
-WorkBridge Commander is designed to be connected by MCP clients over Streamable HTTP, while a WorkBridge-qualified workstation payload is reached through VeraMesh.
+WorkBridge Commander is designed to be connected by MCP clients over Streamable HTTP. The current source implementation reaches a WorkBridge-qualified workstation payload through its authenticated device attachment bridge; VeraMesh remains the intended secure transport/integration boundary where an exact adapter is separately verified.
 
 ## Before client connection
 
 A usable deployment needs all of the following:
 
 1. a WorkBridgeMCP-qualified DesktopCommanderMCP package on the target workstation;
-2. a VeraMesh tunnel path that launches the exact packaged payload;
+2. an authenticated Commander device-attachment route to the exact packaged payload (and, when used, a separately verified VeraMesh transport adapter);
 3. a deployed WorkBridge Commander remote endpoint;
 4. authentication and device/account binding for that endpoint;
-5. a verified route from the endpoint through VeraMesh to the intended workstation.
+5. a verified route from the endpoint to the intended workstation, with any claimed VeraMesh segment verified rather than inferred.
 
 Do not substitute the native bounded WorkBridge Go server if the intended product is Commander parity; the two surfaces deliberately have different process semantics.
 
