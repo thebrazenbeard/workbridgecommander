@@ -3,27 +3,27 @@ import { LanePool } from "./lanes.js";
 import { ExecutionEventLog } from "./execution-events.js";
 import type { ExecutionEventStore } from "./execution-store.js";
 
-export type LogicLaneState = "queued" | "running" | "waiting-for-effect" | "completed" | "failed";
+export type WorkContextState = "queued" | "running" | "waiting-for-effect" | "completed" | "failed";
 
-export type LogicLaneRecord = {
+export type WorkContextRecord = {
   id: string;
-  state: LogicLaneState;
+  state: WorkContextState;
   createdAt: number;
   startedAt?: number;
   finishedAt?: number;
   effectDevice?: string;
 };
 
-export class LogicOrchestrator {
+export class WorkContextOrchestrator {
   private readonly pool: LanePool;
-  private readonly records = new Map<string, LogicLaneRecord>();
+  private readonly records = new Map<string, WorkContextRecord>();
   readonly events: ExecutionEventLog;
 
   constructor(capacity: number, store?: ExecutionEventStore) { this.pool = new LanePool(capacity); this.events = new ExecutionEventLog(200, store); }
 
-  create(): LogicLaneRecord {
+  create(): WorkContextRecord {
     this.prune();
-    const record: LogicLaneRecord = { id: randomUUID(), state: "queued", createdAt: Date.now() };
+    const record: WorkContextRecord = { id: randomUUID(), state: "queued", createdAt: Date.now() };
     this.records.set(record.id, record);
     this.events.append(record.id, "created", { state: record.state });
     return record;
@@ -72,7 +72,7 @@ export class LogicOrchestrator {
 
   private require(id: string) {
     const lane = this.records.get(id);
-    if (!lane) throw new Error("unknown logic lane");
+    if (!lane) throw new Error("unknown upstream work context");
     return lane;
   }
 }
