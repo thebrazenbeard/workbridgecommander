@@ -3,7 +3,8 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import WebSocket from "ws";
-import type { DeviceRequest, JsonRpc } from "./protocol.js";\nimport { assertSafeDeviceServiceUrl, resolveInsideRoot } from "./security.js";
+import type { DeviceRequest, JsonRpc } from "./protocol.js";
+import { assertSafeDeviceServiceUrl, resolveInsideRoot } from "./security.js";
 
 const serviceUrl = process.env.WORKBRIDGE_SERVICE_URL ?? "";
 const token = process.env.WORKBRIDGE_DEVICE_TOKEN ?? "";
@@ -29,8 +30,8 @@ async function sha256(file: string) {
   return createHash("sha256").update(await readFile(file)).digest("hex");
 }
 
-const nodeExe = path.resolve(installRoot, manifest.node_executable_relative);
-const entrypoint = path.resolve(installRoot, manifest.entrypoint_relative);
+const nodeExe = resolveInsideRoot(installRoot, manifest.node_executable_relative);
+const entrypoint = resolveInsideRoot(installRoot, manifest.entrypoint_relative);
 if (await sha256(nodeExe) !== manifest.node_sha256.toLowerCase()) throw new Error("packaged Node hash mismatch");
 if (await sha256(entrypoint) !== manifest.entrypoint_sha256.toLowerCase()) throw new Error("Desktop Commander entrypoint hash mismatch");
 
@@ -54,7 +55,8 @@ let reconnectAttempt = 0;
 let stopped = false;
 
 function connect() {
-  const url = new URL(serviceUrl);\n  assertSafeDeviceServiceUrl(url);
+  const url = new URL(serviceUrl);
+  assertSafeDeviceServiceUrl(url);
   url.pathname = "/device";
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   ws = new WebSocket(url);
@@ -68,16 +70,22 @@ function connect() {
     const message = JSON.parse(raw.toString()) as Partial<DeviceRequest> & { type?: string };
     if (message.type === "request" && typeof message.requestId === "string" && message.payload) {
       if (message.payload.id === undefined) {
-        child.stdin.write(JSON.stringify(message.payload) + "\n");
+        child.stdin.write(JSON.stringify(message.payload) + "
+");
         return;
       }
       const bridgeId = localId++;
       pendingOutbound.set(bridgeId, { requestId: message.requestId, originalId: message.payload.id });
-      child.stdin.write(JSON.stringify({ ...message.payload, id: bridgeId }) + "\n");
+      child.stdin.write(JSON.stringify({ ...message.payload, id: bridgeId }) + "
+");
     }
   });
 
-  ws.on("error", error => {\n    console.error(JSON.stringify({ status: "device-websocket-error", message: error.message }));\n  });\n\n  ws.on("close", () => {
+  ws.on("error", error => {
+    console.error(JSON.stringify({ status: "device-websocket-error", message: error.message }));
+  });
+
+  ws.on("close", () => {
     if (stopped) return;
     for (const marker of pendingOutbound.values()) {
       console.error(JSON.stringify({ status: "request-abandoned-on-disconnect", requestId: marker.requestId }));
@@ -90,7 +98,8 @@ function connect() {
 
 child.stdout.on("data", chunk => {
   buffer += chunk.toString();
-  const lines = buffer.split("\n");
+  const lines = buffer.split("
+");
   buffer = lines.pop() ?? "";
   for (const raw of lines) {
     const line = raw.trim();
