@@ -93,11 +93,19 @@ const server = http.createServer(async (req, res) => {
 
   const chunks: Buffer[] = [];
   let size = 0;
-  for await (const chunk of req) {
-    const b = Buffer.from(chunk);
-    size += b.length;
-    if (size > 2_000_000) return json(res, 413, { error: "request too large" });
-    chunks.push(b);
+  try {
+    for await (const chunk of req) {
+      const b = Buffer.from(chunk);
+      size += b.length;
+      if (size > 2_000_000) return json(res, 413, { error: "request too large" });
+      chunks.push(b);
+    }
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error
+      ? String((error as { code?: unknown }).code)
+      : undefined;
+    if (code === "ECONNRESET" || req.destroyed) return;
+    throw error;
   }
 
   let payload: unknown;
