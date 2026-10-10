@@ -2,6 +2,9 @@ export class ResourceKeyGate {
   private readonly tails = new Map<string, Promise<void>>();
 
   async run<T>(key: string, work: () => Promise<T>): Promise<T> {
+    if (typeof key !== "string" || !key.trim()) {
+      throw new TypeError("resource key must be a non-empty string");
+    }
     const prior = this.tails.get(key) ?? Promise.resolve();
     let release!: () => void;
     const mine = new Promise<void>(r => { release = r; });

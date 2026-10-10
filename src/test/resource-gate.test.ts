@@ -33,3 +33,12 @@ test("same resource key serializes effects while distinct keys remain parallel",
   releaseB();
   await Promise.all([a1, a2, b]);
 });
+
+test("reject ambiguous empty or whitespace-only resource key without dispatch", async () => {
+  const gate = new ResourceKeyGate();
+  let called = false;
+  for (const key of ["", " ", "\t"]) {
+    await assert.rejects(gate.run(key, async () => { called = true; }), /resource key/i);
+  }
+  assert.equal(called, false);
+});
