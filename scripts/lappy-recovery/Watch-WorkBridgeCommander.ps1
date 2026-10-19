@@ -1,6 +1,5 @@
-param([switch]$Once,[switch]$ProbeOnly,[int]$PollSeconds=10)
+param([switch]$Once,[switch]$ProbeOnly,[ValidateRange(1,3600)][int]$PollSeconds=10,[string]$Root='D:\VERA\tools\WorkBridgeCommander')
 $ErrorActionPreference='Stop'
-$Root='D:\VERA\tools\WorkBridgeCommander'
 $StatePath=Join-Path $Root 'runtime-state.json'
 $LogPath=Join-Path $Root 'logs\supervisor.jsonl'
 function Test-CommanderRuntime {

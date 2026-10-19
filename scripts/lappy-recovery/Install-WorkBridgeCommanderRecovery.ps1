@@ -9,7 +9,14 @@ $supervisorSource=Join-Path $PSScriptRoot 'Watch-WorkBridgeCommander.ps1'
 $supervisorTarget=Join-Path $Root 'Watch-WorkBridgeCommander.ps1'
 $backup=Join-Path $Root ('backups\recovery-'+[datetime]::UtcNow.ToString('yyyyMMdd-HHmmss'))
 $raw=[IO.File]::ReadAllText($launcher)
-$needle='$server = Start-Process -FilePath $node'
+$package=Join-Path $InstallRoot 'package.json'
+if(-not(Test-Path -LiteralPath $package -PathType Leaf)){throw 'Payload package.json is missing'}
+if(-not(Test-Path -LiteralPath $supervisorSource -PathType Leaf)){throw 'Supervisor source is missing'}
+if([regex]::Matches($raw,'(?m)^function Stop-PriorRuntime \{').Count -ne 1){throw 'Unsupported launcher: missing or ambiguous cleanup function'}
+foreach($name in @('server','device','tunnel')) {
+ $pattern='(?m)^\$'+$name+' = Start-Process '
+ if([regex]::Matches($raw,$pattern).Count -ne 1){throw ('Unsupported launcher: missing or ambiguous '+$name+' start')}
+}
 if(-not $raw.Contains('function Write-PartialRuntimeState')) {
  $function=@'
 function Write-PartialRuntimeState([int]$ServerPid,[int]$DevicePid,[int]$TunnelPid) {
@@ -35,7 +42,10 @@ function Write-PartialRuntimeState([int]$ServerPid,[int]$DevicePid,[int]$TunnelP
 $errors=$null;$tokens=$null
 [Management.Automation.Language.Parser]::ParseInput($raw,[ref]$tokens,[ref]$errors)|Out-Null
 if($errors.Count){throw ($errors|Out-String)}
-if(-not $Install){'INSTALLER_DRY_RUN_PARSE_PASS';return}
+$writes=[regex]::Matches($raw,'(?m)^Write-PartialRuntimeState ').Count
+if($writes -ne 3){throw 'Unsupported launcher: expected three partial ownership writes'}
+$plan=[pscustomobject]@{installed=$false;startup='user-logon';run_level='Highest';partial_state_writes=$writes;root=$Root;payload_content_preserved=$true}
+if(-not $Install){$plan|ConvertTo-Json -Compress;return}
 New-Item -ItemType Directory -Force $backup|Out-Null
 Copy-Item $launcher (Join-Path $backup 'Start-WorkBridgeCommander.before.ps1')
 [IO.File]::WriteAllText($launcher,$raw,(New-Object Text.UTF8Encoding($false)))
@@ -49,7 +59,7 @@ $rule=New-Object Security.AccessControl.FileSystemAccessRule($user,'ReadAndExecu
 $acl.AddAccessRule($rule)
 Set-Acl $package $acl
 if((Get-FileHash $package -Algorithm SHA256).Hash -ne $beforeHash){throw 'Payload package content changed'}
-$action=New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "'+$supervisorTarget+'"')
+$action=New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "'+$supervisorTarget+'" -Root "'+$Root+'"')
 $trigger=New-ScheduledTaskTrigger -AtLogOn -User $user
 $principal=New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Highest
 $settings=New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Seconds 0) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew -StartWhenAvailable -DontStopIfGoingOnBatteries -AllowStartIfOnBatteries
