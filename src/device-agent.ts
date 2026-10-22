@@ -1,3 +1,4 @@
+import { attachHeartbeat } from "./connection-heartbeat.js";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -153,6 +154,7 @@ function connect() {
   url.pathname = "/device";
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   const socket = new WebSocket(url, { maxPayload: 2_000_000 });
+  attachHeartbeat(socket, { onTimeout: () => console.error(JSON.stringify({ status: "device-heartbeat-timeout" })) });
   ws = socket;
 
   socket.on("open", () => {
