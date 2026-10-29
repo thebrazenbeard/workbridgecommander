@@ -1,6 +1,12 @@
 export const QUALIFICATION_EXECUTION_FLOOR = 4;
 export const QUALIFICATION_UPSTREAM_CONTEXT_FLOOR = 32;
 
+// A standalone launcher must not expose workstation-control endpoints to the
+// network merely because HOST was omitted. Remote listeners are opt-in.
+export function listenHost(env: NodeJS.ProcessEnv = process.env): string {
+  return env.HOST === undefined || env.HOST === "" ? "127.0.0.1" : env.HOST;
+}
+
 function positiveInt(name: string, raw: string | undefined, fallback: number): number {
   if (raw === undefined || raw === "") return fallback;
   const value = Number(raw);

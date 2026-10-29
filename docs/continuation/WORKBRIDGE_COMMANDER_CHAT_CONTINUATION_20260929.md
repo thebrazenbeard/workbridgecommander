@@ -1,5 +1,13 @@
 # WorkBridge Commander — Chat Continuation 2026-09-29
 
+> **Historical handoff, not a current deployment runbook (2026-10-29).**
+> The tunnel ID, app-binding instructions, pinned source revision, and
+> "Immediate next work" below describe the September 29 investigation only.
+> They do **not** establish the current ChatGPT plugin's saved tunnel target
+> or authorize reusing a historical tunnel, stopping the live Lappy service,
+> or running this bootstrap. Qualify the current repository head, authenticated
+> plugin binding, Windows preflight, and rollback before any replacement.
+
 Repository: `thebrazenbeard/workbridgecommander`
 Canonical branch: `main`
 Observed main head at handoff: `e189de040092a36830b5984f1d31f1baaf8cf8bb`
