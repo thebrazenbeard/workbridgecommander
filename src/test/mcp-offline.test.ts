@@ -12,7 +12,7 @@ test("MCP housekeeping remains available without a workstation and forwards only
       HOST: "127.0.0.1",
       WORKBRIDGE_CLIENT_TOKEN: "client-test",
       WORKBRIDGE_DEVICE_TOKEN: "device-test",
-      WORKBRIDGE_DEFAULT_DEVICE: ""
+      WORKBRIDGE_DEFAULT_DEVICE: "fake"
     },
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -61,8 +61,8 @@ test("MCP housekeeping remains available without a workstation and forwards only
     assert.deepEqual((await offlineTools.json()).result, { tools: [] });
 
     const offlineEffect = await call("tools/call", 31);
-    assert.equal(offlineEffect.status, 503);
-    assert.match((await offlineEffect.json()).error.message, /no workstation connected/i);
+    assert.equal(offlineEffect.status, 404);
+    assert.match((await offlineEffect.json()).error.message, /not connected/i);
 
     const effects = await fetch(`http://127.0.0.1:${port}/effects`, { headers: { authorization: "Bearer client-test" } });
     assert.deepEqual((await effects.json()).effects, []);
