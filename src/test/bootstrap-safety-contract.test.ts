@@ -43,6 +43,14 @@ test("bootstrap requires a reviewed source commit with no stale default and reje
   assert.match(script, /\$git checkout --detach \$CommanderCommit/);
 });
 
+test("bootstrap validates existing Git origin before any filesystem writes", () => {
+  assert.match(script, /\$gitPreflight = \(Get-Command git -ErrorAction Stop\)\.Source/);
+  assert.match(script, /remote get-url origin/);
+  assert.match(script, /https:\/\/github\.com\/thebrazenbeard\/workbridgecommander\.git/);
+  assert.match(script, /Refusing a WorkBridge Commander checkout with an untrusted origin/);
+  assert.ok(script.indexOf("Refusing a WorkBridge Commander checkout with an untrusted origin") < script.indexOf("New-Item -ItemType Directory"));
+});
+
 test("bootstrap preserves unknown source directories and checks tunnel custody even with state", () => {
   assert.match(script, /Refusing to overwrite an existing non-Git source directory/);
   assert.doesNotMatch(script, /Remove-Item -LiteralPath \$SourceRoot -Recurse/);
