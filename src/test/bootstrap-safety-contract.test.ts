@@ -30,9 +30,17 @@ test("bootstrap blocks unsafe existing/untracked service replacement before file
   assert.match(script, /Assert-RecordedProcess \(\[int\]\$state\.server_pid\)/);
 });
 
-test("bootstrap pins reviewed source rather than historical pre-hardening version", () => {
-  assert.match(script, /\$CommanderCommit = "40e523f75771a83b4be666940c6fdec3f8ffe445"/);
-  assert.doesNotMatch(script, /1692c54595ee2974c48719ad5e7de528089a70ff/);
+test("bootstrap requires a reviewed source commit with no stale default and rejects obsolete heads", () => {
+  assert.match(script, /\[Parameter\(Mandatory = \$true\)\]\s*\[ValidatePattern\('\^\[0-9a-fA-F\]\{40\}\$'\)\]\s*\[string\]\$ReviewedCommanderCommit/);
+  assert.match(script, /\$CommanderCommit = \$ReviewedCommanderCommit\.ToLowerInvariant\(\)/);
+  assert.doesNotMatch(script, /\[string\]\$ReviewedCommanderCommit\s*=/);
+  assert.match(script, /\$CommanderCommit -in @\(/);
+  assert.match(script, /40e523f75771a83b4be666940c6fdec3f8ffe445/);
+  assert.match(script, /1692c54595ee2974c48719ad5e7de528089a70ff/);
+  assert.match(script, /Refusing an obsolete Commander source commit/);
+  assert.ok(script.indexOf("Refusing an obsolete Commander source commit") < script.indexOf("New-Item -ItemType Directory"));
+  assert.match(script, /\$git fetch origin \$CommanderCommit --depth=1/);
+  assert.match(script, /\$git checkout --detach \$CommanderCommit/);
 });
 
 test("bootstrap preserves unknown source directories and checks tunnel custody even with state", () => {
