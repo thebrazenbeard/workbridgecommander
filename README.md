@@ -76,6 +76,15 @@ npm run build
 npm start
 ```
 
+The HTTP/WebSocket server defaults to **`127.0.0.1` only**. Its API can
+execute workstation commands, so an unattended launch must not bind every
+network interface. For a deliberately remote deployment, explicitly set
+`HOST` to the intended interface (for example `HOST=0.0.0.0`), and secure the
+listener with host firewall rules and a trusted authenticated transport.
+The unauthenticated `/health` endpoint currently returns operational metadata;
+do not expose it to untrusted networks. An MCP tunnel to a local service does
+not require `HOST=0.0.0.0`.
+
 On a workstation that already has the WorkBridge-qualified DesktopCommander duplicate installed, set `WORKBRIDGE_SERVICE_URL`, `WORKBRIDGE_DEVICE_ID`, `WORKBRIDGE_DEVICE_TOKEN`, and optionally `WORKBRIDGE_INSTALL_ROOT`, then run:
 
 ```powershell
