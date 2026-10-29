@@ -87,6 +87,10 @@ if (@($tunnelProcesses | Where-Object { [int]$_.ProcessId -ne $recordedTunnelPid
 # An existing checkout must point at the reviewed canonical repository. A
 # caller-supplied SHA is not sufficient source provenance if `origin` was
 # redirected to a different repository. Check before any filesystem mutation.
+if ((Test-Path -LiteralPath $SourceRoot) -and
+    -not (Test-Path -LiteralPath (Join-Path $SourceRoot ".git"))) {
+  throw "Refusing to overwrite an existing non-Git source directory: $SourceRoot"
+}
 if (Test-Path -LiteralPath (Join-Path $SourceRoot ".git")) {
   $gitPreflight = (Get-Command git -ErrorAction Stop).Source
   $originResult = @(& $gitPreflight -C $SourceRoot remote get-url origin 2>$null)

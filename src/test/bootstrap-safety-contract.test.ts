@@ -51,6 +51,14 @@ test("bootstrap validates existing Git origin before any filesystem writes", () 
   assert.ok(script.indexOf("Refusing a WorkBridge Commander checkout with an untrusted origin") < script.indexOf("New-Item -ItemType Directory"));
 });
 
+test("bootstrap rejects existing non-Git sources before creating or replacing artifacts", () => {
+  const denial = "Refusing to overwrite an existing non-Git source directory";
+  assert.match(script, /if \(\(Test-Path -LiteralPath \$SourceRoot\) -and\s+-not \(Test-Path -LiteralPath \(Join-Path \$SourceRoot "\.git"\)\)\)/);
+  assert.ok(script.indexOf(denial) >= 0);
+  assert.ok(script.indexOf(denial) < script.indexOf("New-Item -ItemType Directory"));
+  assert.ok(script.indexOf(denial) < script.indexOf("Copy-Item -LiteralPath $found.FullName"));
+});
+
 test("bootstrap preserves unknown source directories and checks tunnel custody even with state", () => {
   assert.match(script, /Refusing to overwrite an existing non-Git source directory/);
   assert.doesNotMatch(script, /Remove-Item -LiteralPath \$SourceRoot -Recurse/);
