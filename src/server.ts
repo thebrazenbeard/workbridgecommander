@@ -124,7 +124,7 @@ const server = http.createServer(async (req, res) => {
   // MCP discovery must remain a valid read-only response during workstation
   // disconnects. An empty list describes the *currently* available tools;
   // workstation methods still fail closed until an authenticated device joins.
-  if (payload.method === "tools/list" && payload.id !== undefined && !resolved && !requested && !defaultDevice) {
+  if (payload.method === "tools/list" && payload.id !== undefined && !resolved && !requested) {
     return json(res, 200, { jsonrpc: "2.0", id: payload.id, result: { tools: [] } });
   }
 
