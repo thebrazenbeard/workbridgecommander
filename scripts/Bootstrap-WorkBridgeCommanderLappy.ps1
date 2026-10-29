@@ -1,5 +1,10 @@
 param(
-  [string]$TunnelId = "tunnel_6abc08e792448191bb33223bdba84c4d"
+  [Parameter(Mandatory = $true)]
+  [ValidatePattern('^tunnel_[A-Za-z0-9]+$')]
+  [string]$TunnelId,
+  [Parameter(Mandatory = $true)]
+  [string]$ConfirmedInstalledAppTunnelId,
+  [switch]$ReplaceExistingRuntime
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,10 +17,61 @@ $LogRoot = Join-Path $Root "logs"
 $ProfilePath = Join-Path $Root "tunnel-profile.yaml"
 $HealthUrlFile = Join-Path $Root "tunnel-health-url.txt"
 $StatePath = Join-Path $Root "runtime-state.json"
-$CommanderCommit = "1692c54595ee2974c48719ad5e7de528089a70ff"
+$CommanderCommit = "40e523f75771a83b4be666940c6fdec3f8ffe445"
 $TrustedManifestSha256 = "0e2e80ae5acd26c04e0adb5ac21b453edbe5b7004505998d2692b7b948ae1e2f"
 $InstallRoot = "C:\ProgramData\WorkBridgeMCP\DesktopCommanderMCP"
 $ManifestPath = Join-Path $InstallRoot "workbridge-desktop-commander.manifest.json"
+
+# Require a separate operator attestation of the installed ChatGPT app tunnel.
+# Matching two caller arguments is NOT an authenticated plugin-binding readback.
+# Refuse obvious mismatches before writing files or stopping any processes.
+if ($TunnelId -cne $ConfirmedInstalledAppTunnelId) {
+  throw "Tunnel identity mismatch: the requested tunnel is not the confirmed installed ChatGPT app binding"
+}
+if (Test-Path -LiteralPath $StatePath -PathType Leaf) {
+  $existingState = Get-Content -Raw -Encoding UTF8 -LiteralPath $StatePath | ConvertFrom-Json
+  if ([string]$existingState.tunnel_id -cne $TunnelId) {
+    throw "Refusing to replace an existing runtime bound to a different tunnel"
+  }
+  if (-not $ReplaceExistingRuntime) {
+    throw "Existing runtime found; explicit -ReplaceExistingRuntime is required before replacement"
+  }
+  foreach ($recorded in @(
+    @{ Pid = [int]$existingState.tunnel_pid; Needle = "tunnel-client" },
+    @{ Pid = [int]$existingState.device_pid; Needle = "dist/device-agent.js" },
+    @{ Pid = [int]$existingState.server_pid; Needle = "dist/server.js" }
+  )) {
+    if ($recorded.Pid -le 0) { continue }
+    $process = Get-CimInstance Win32_Process -Filter "ProcessId = $($recorded.Pid)" -ErrorAction Stop
+    if ($process -and ([string]$process.CommandLine -notlike "*$($recorded.Needle)*")) {
+      throw "Recorded PID $($recorded.Pid) no longer belongs to the expected runtime command"
+    }
+  }
+}
+else {
+  $existingState = $null
+}
+
+# An untracked listener must never be overwritten. A stale runtime-state.json
+# alone is not enough evidence that the current listener belongs to this run.
+$listeners = @(Get-NetTCPConnection -State Listen -ErrorAction Stop |
+  Where-Object { [int]$_.LocalPort -eq 8787 })
+if ($listeners.Count -gt 0) {
+  if ($null -eq $existingState) {
+    throw "Port 8787 has an untracked listener; refusing to bootstrap over a running service"
+  }
+  $ownedServerPid = [int]$existingState.server_pid
+  if (@($listeners | Where-Object { [int]$_.OwningProcess -eq $ownedServerPid }).Count -ne $listeners.Count) {
+    throw "Port 8787 is not exclusively owned by the recorded Commander server process"
+  }
+}
+# A tunnel can remain active without a Commander listener. Even when a stale
+# state file exists, refuse any tunnel process not owned by that state file.
+$recordedTunnelPid = if ($null -ne $existingState) { [int]$existingState.tunnel_pid } else { 0 }
+$tunnelProcesses = @(Get-CimInstance Win32_Process -Filter "Name = 'tunnel-client.exe'" -ErrorAction Stop)
+if (@($tunnelProcesses | Where-Object { [int]$_.ProcessId -ne $recordedTunnelPid }).Count -gt 0) {
+  throw "Untracked tunnel-client process exists; refusing to create a competing runtime"
+}
 
 New-Item -ItemType Directory -Force -Path $Root,$BinRoot,$LogRoot | Out-Null
 
@@ -50,15 +106,27 @@ function Stop-RecordedProcess([int]$ProcessId,[string]$CommandNeedle) {
   if (-not $record) { return }
   $commandLine = [string]$record.CommandLine
   if ($commandLine -notlike "*$CommandNeedle*") {
-    Write-Warning "Refusing to stop PID $ProcessId because its command line no longer matches $CommandNeedle"
-    return
+    throw "Refusing to replace runtime: PID $ProcessId no longer matches recorded command $CommandNeedle"
   }
   Stop-Process -Id $ProcessId -Force -ErrorAction Stop
+}
+
+function Assert-RecordedProcess([int]$ProcessId,[string]$CommandNeedle) {
+  if ($ProcessId -le 0) { return }
+  $record = Get-CimInstance Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction SilentlyContinue
+  if ($record -and ([string]$record.CommandLine -notlike "*$CommandNeedle*")) {
+    throw "Refusing to replace runtime: PID $ProcessId no longer matches recorded command $CommandNeedle"
+  }
 }
 
 function Stop-PriorRuntime {
   if (-not (Test-Path -LiteralPath $StatePath -PathType Leaf)) { return }
   $state = Get-Content -Raw -Encoding UTF8 $StatePath | ConvertFrom-Json
+  # Validate all recorded PIDs before terminating any of them to avoid partial
+  # shutdown when a PID has been reused by an unrelated process.
+  Assert-RecordedProcess ([int]$state.tunnel_pid) "tunnel-client"
+  Assert-RecordedProcess ([int]$state.device_pid) "dist/device-agent.js"
+  Assert-RecordedProcess ([int]$state.server_pid) "dist/server.js"
   Stop-RecordedProcess ([int]$state.tunnel_pid) "tunnel-client"
   Stop-RecordedProcess ([int]$state.device_pid) "dist/device-agent.js"
   Stop-RecordedProcess ([int]$state.server_pid) "dist/server.js"
@@ -111,7 +179,9 @@ if (-not (Test-Path -LiteralPath $tunnelExe -PathType Leaf)) {
 }
 
 if (-not (Test-Path -LiteralPath (Join-Path $SourceRoot ".git"))) {
-  if (Test-Path -LiteralPath $SourceRoot) { Remove-Item -LiteralPath $SourceRoot -Recurse -Force }
+  if (Test-Path -LiteralPath $SourceRoot) {
+    throw "Refusing to overwrite an existing non-Git source directory: $SourceRoot"
+  }
   & $git clone --no-tags "https://github.com/thebrazenbeard/workbridgecommander.git" $SourceRoot
   if ($LASTEXITCODE -ne 0) { throw "WorkBridge Commander clone failed" }
 }
@@ -239,7 +309,7 @@ Wait-Until {
   tunnel_health_url = $healthBase
   mcp_session_verified = $true
   local_tool_count = $localToolNames.Count
-  local_start_process_verified = $true
+  local_start_process_verified = $false
   started_utc = [DateTime]::UtcNow.ToString("o")
 } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $StatePath -Encoding UTF8
 
@@ -254,6 +324,6 @@ Write-Host "WORKBRIDGE COMMANDER READY"
 Write-Host "Tunnel: $TunnelId"
 Write-Host "Commander: http://127.0.0.1:8787"
 Write-Host "Device: lappy"
-Write-Host "Tools: $($localToolNames.Count) (start_process verified)"
+Write-Host "Tools: $($localToolNames.Count) (start_process listed; execution not verified)"
 Write-Host "State: $StatePath"
 Write-Host "Logs: $LogRoot"
