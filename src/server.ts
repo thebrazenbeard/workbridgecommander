@@ -39,8 +39,8 @@ function rpcError(id: JsonRpc["id"], code: number, message: string): JsonRpc {
   return { jsonrpc: "2.0", id: id ?? null, error: { code, message } };
 }
 
-function localInitializeResponse(payload: JsonRpc, device: DeviceConnection): JsonRpc {
-  const downstream = device.initializeResult;
+function localInitializeResponse(payload: JsonRpc, device?: DeviceConnection): JsonRpc {
+  const downstream = device?.initializeResult ?? {};
   const requested = payload.params && typeof payload.params === "object" && !Array.isArray(payload.params)
     ? (payload.params as Record<string, unknown>).protocolVersion
     : undefined;
@@ -49,7 +49,7 @@ function localInitializeResponse(payload: JsonRpc, device: DeviceConnection): Js
     : (typeof requested === "string" ? requested : "2025-06-18");
   const capabilities = downstream.capabilities && typeof downstream.capabilities === "object"
     ? downstream.capabilities
-    : {};
+    : device ? {} : { tools: {} };
   return {
     jsonrpc: "2.0",
     id: payload.id ?? null,
@@ -108,13 +108,10 @@ const server = http.createServer(async (req, res) => {
   const requested = req.headers["x-workbridge-device"];
   const deviceId = (Array.isArray(requested) ? requested[0] : requested) || defaultDevice || registry.list()[0];
   if (deviceId && (deviceId.length > 128 || !/^[A-Za-z0-9._:-]+$/.test(deviceId))) return json(res, 400, rpcError(payload.id, -32602, "invalid workstation id"));
-  if (!deviceId) return json(res, 503, rpcError(payload.id, -32001, "no workstation connected"));
-  const resolved = registry.resolve(deviceId);
-  if (!resolved) return json(res, 404, rpcError(payload.id, -32002, "requested workstation is not connected"));
-  const { device, generation } = resolved;
+  const resolved = deviceId ? registry.resolve(deviceId) : undefined;
 
   if (payload.method === "initialize" && payload.id !== undefined) {
-    return json(res, 200, localInitializeResponse(payload, device));
+    return json(res, 200, localInitializeResponse(payload, resolved?.device));
   }
   if (payload.method === "notifications/initialized" && payload.id === undefined) {
     res.writeHead(202, { "cache-control": "no-store" });
@@ -123,6 +120,17 @@ const server = http.createServer(async (req, res) => {
   if (payload.method === "ping" && payload.id !== undefined) {
     return json(res, 200, { jsonrpc: "2.0", id: payload.id ?? null, result: {} });
   }
+
+  // MCP discovery must remain a valid read-only response during workstation
+  // disconnects. An empty list describes the *currently* available tools;
+  // workstation methods still fail closed until an authenticated device joins.
+  if (payload.method === "tools/list" && payload.id !== undefined && !resolved && !requested && !defaultDevice) {
+    return json(res, 200, { jsonrpc: "2.0", id: payload.id, result: { tools: [] } });
+  }
+
+  if (!deviceId) return json(res, 503, rpcError(payload.id, -32001, "no workstation connected"));
+  if (!resolved) return json(res, 404, rpcError(payload.id, -32002, "requested workstation is not connected"));
+  const { device, generation } = resolved;
 
   try {
     const parentHeader = req.headers["x-workbridge-parent-execution"];
