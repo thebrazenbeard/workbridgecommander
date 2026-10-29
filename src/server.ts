@@ -5,7 +5,7 @@ import { DeviceConnection, DeviceEffectError, DeviceRegistry } from "./device-re
 import { WorkContextOrchestrator } from "./orchestrator.js";
 import type { DeviceHello, DeviceResponse, JsonRpc } from "./protocol.js";
 import { isJsonRpc, isNotification } from "./protocol.js";
-import { capacityConfig, qualificationStatus } from "./config.js";
+import { capacityConfig, listenHost, qualificationStatus } from "./config.js";
 import { isOriginAllowed } from "./security.js";
 import { ResourceKeyGate } from "./resource-gate.js";
 import { JsonlExecutionEventStore } from "./execution-store.js";
@@ -13,7 +13,7 @@ import { EffectLedger } from "./effect-ledger.js";
 import { randomUUID } from "node:crypto";
 
 const port = Number(process.env.PORT ?? "8787");
-const host = process.env.HOST ?? "0.0.0.0";
+const host = listenHost();
 const clientToken = process.env.WORKBRIDGE_CLIENT_TOKEN ?? "";
 const deviceToken = process.env.WORKBRIDGE_DEVICE_TOKEN ?? "";
 const defaultDevice = process.env.WORKBRIDGE_DEFAULT_DEVICE ?? "";
