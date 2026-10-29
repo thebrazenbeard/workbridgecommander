@@ -4,6 +4,9 @@ param(
   [string]$TunnelId,
   [Parameter(Mandatory = $true)]
   [string]$ConfirmedInstalledAppTunnelId,
+  [Parameter(Mandatory = $true)]
+  [ValidatePattern('^[0-9a-fA-F]{40}$')]
+  [string]$ReviewedCommanderCommit,
   [switch]$ReplaceExistingRuntime
 )
 
@@ -17,7 +20,7 @@ $LogRoot = Join-Path $Root "logs"
 $ProfilePath = Join-Path $Root "tunnel-profile.yaml"
 $HealthUrlFile = Join-Path $Root "tunnel-health-url.txt"
 $StatePath = Join-Path $Root "runtime-state.json"
-$CommanderCommit = "40e523f75771a83b4be666940c6fdec3f8ffe445"
+$CommanderCommit = $ReviewedCommanderCommit.ToLowerInvariant()
 $TrustedManifestSha256 = "0e2e80ae5acd26c04e0adb5ac21b453edbe5b7004505998d2692b7b948ae1e2f"
 $InstallRoot = "C:\ProgramData\WorkBridgeMCP\DesktopCommanderMCP"
 $ManifestPath = Join-Path $InstallRoot "workbridge-desktop-commander.manifest.json"
@@ -25,6 +28,14 @@ $ManifestPath = Join-Path $InstallRoot "workbridge-desktop-commander.manifest.js
 # Require a separate operator attestation of the installed ChatGPT app tunnel.
 # Matching two caller arguments is NOT an authenticated plugin-binding readback.
 # Refuse obvious mismatches before writing files or stopping any processes.
+# The source revision must be explicitly supplied after review. There is no
+# default: the old base did not contain the later environment/MCP fixes.
+if ($CommanderCommit -in @(
+  "40e523f75771a83b4be666940c6fdec3f8ffe445",
+  "1692c54595ee2974c48719ad5e7de528089a70ff"
+)) {
+  throw "Refusing an obsolete Commander source commit; supply a newly reviewed integrated revision"
+}
 if ($TunnelId -cne $ConfirmedInstalledAppTunnelId) {
   throw "Tunnel identity mismatch: the requested tunnel is not the confirmed installed ChatGPT app binding"
 }
@@ -71,6 +82,23 @@ $recordedTunnelPid = if ($null -ne $existingState) { [int]$existingState.tunnel_
 $tunnelProcesses = @(Get-CimInstance Win32_Process -Filter "Name = 'tunnel-client.exe'" -ErrorAction Stop)
 if (@($tunnelProcesses | Where-Object { [int]$_.ProcessId -ne $recordedTunnelPid }).Count -gt 0) {
   throw "Untracked tunnel-client process exists; refusing to create a competing runtime"
+}
+
+# An existing checkout must point at the reviewed canonical repository. A
+# caller-supplied SHA is not sufficient source provenance if `origin` was
+# redirected to a different repository. Check before any filesystem mutation.
+if (Test-Path -LiteralPath (Join-Path $SourceRoot ".git")) {
+  $gitPreflight = (Get-Command git -ErrorAction Stop).Source
+  $originResult = @(& $gitPreflight -C $SourceRoot remote get-url origin 2>$null)
+  if ($LASTEXITCODE -ne 0 -or $originResult.Count -ne 1) {
+    throw "Refusing a WorkBridge Commander checkout with an untrusted origin"
+  }
+  if ([string]$originResult[0] -cnotin @(
+    "https://github.com/thebrazenbeard/workbridgecommander.git",
+    "https://github.com/thebrazenbeard/workbridgecommander"
+  )) {
+    throw "Refusing a WorkBridge Commander checkout with an untrusted origin"
+  }
 }
 
 New-Item -ItemType Directory -Force -Path $Root,$BinRoot,$LogRoot | Out-Null
