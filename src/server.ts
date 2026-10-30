@@ -11,6 +11,7 @@ import { ResourceKeyGate } from "./resource-gate.js";
 import { JsonlExecutionEventStore } from "./execution-store.js";
 import { EffectLedger } from "./effect-ledger.js";
 import { randomUUID } from "node:crypto";
+import { QueuedWorkCancelledError } from "./lanes.js";
 
 const port = Number(process.env.PORT ?? "8787");
 const host = listenHost();
@@ -62,7 +63,7 @@ function localInitializeResponse(payload: JsonRpc, device?: DeviceConnection): J
   };
 }
 
-const server = http.createServer(async (req, res) => {
+async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
   if (req.method === "GET" && req.url === "/effects") {
     if (!bearerAuthorized(req.headers.authorization, clientToken)) return json(res, 401, { error: "unauthorized" });
     return json(res, 200, { effects: effects.recent() });
@@ -132,6 +133,15 @@ const server = http.createServer(async (req, res) => {
   if (!resolved) return json(res, 404, rpcError(payload.id, -32002, "requested workstation is not connected"));
   const { device, generation } = resolved;
 
+  // IncomingMessage can close normally when its body is fully read. The
+  // response closing before completion is the post-upload disconnect signal.
+  const disconnected = new AbortController();
+  const onResponseClose = () => {
+    if (!res.writableEnded) disconnected.abort();
+  };
+  res.on("close", onResponseClose);
+  if (res.destroyed) disconnected.abort();
+
   try {
     const parentHeader = req.headers["x-workbridge-parent-execution"];
     const parentExecutionId = Array.isArray(parentHeader) ? parentHeader[0] : parentHeader;
@@ -143,36 +153,69 @@ const server = http.createServer(async (req, res) => {
     logic.bindEffect(lane.id, deviceId);
     const effectId = randomUUID();
     effects.create(effectId, deviceId, generation, false);
-    const dispatch = <T>(work: (device: DeviceConnection) => Promise<T>) => {
+    const markCancelledBeforeSend = () => {
+      const state = effects.get(effectId)?.disposition;
+      if (state === "QUEUED" || state === "ADMITTED") effects.transition(effectId, "CANCELLED");
+    };
+    disconnected.signal.addEventListener("abort", markCancelledBeforeSend, { once: true });
+    if (disconnected.signal.aborted) markCancelledBeforeSend();
+    const dispatch = <T>(work: (device: DeviceConnection, onDispatch: () => void) => Promise<T>) => {
+      if (disconnected.signal.aborted) throw new QueuedWorkCancelledError();
       effects.transition(effectId, "ADMITTED");
       const execute = async () => {
+        if (disconnected.signal.aborted) throw new QueuedWorkCancelledError();
         const current = registry.getIfGeneration(deviceId, generation);
         if (!current) {
           effects.transition(effectId, "FAILED");
           throw new Error("workstation connection changed before effect dispatch");
         }
-        effects.transition(effectId, "DISPATCHED");
         try {
-          const value = await work(current);
+          const value = await work(current, () => effects.transition(effectId, "DISPATCHED"));
           effects.transition(effectId, "COMPLETED");
           return value;
         } catch (error) {
-          effects.transition(effectId, error instanceof DeviceEffectError && error.disposition === "OUTCOME_UNKNOWN" ? "OUTCOME_UNKNOWN" : "FAILED");
+          effects.transition(effectId, error instanceof QueuedWorkCancelledError ? "CANCELLED"
+            : error instanceof DeviceEffectError && error.disposition === "OUTCOME_UNKNOWN" ? "OUTCOME_UNKNOWN" : "FAILED");
           throw error;
         }
       };
-      return resourceKey ? resourceGate.run(resourceKey, execute) : execute();
+      return resourceKey ? resourceGate.run(resourceKey, execute, disconnected.signal) : execute();
     };
     if (isNotification(payload)) {
-      await logic.run(lane.id, () => dispatch(device => device.notify(payload)));
+      await logic.run(lane.id, () => dispatch((device, onDispatch) => device.notify(payload, { signal: disconnected.signal, onDispatch })), disconnected.signal);
+      if (res.destroyed) return;
       res.writeHead(202, { "cache-control": "no-store" });
       return res.end();
     }
-    const response = await logic.run(lane.id, () => dispatch(device => device.request(payload)));
+    const response = await logic.run(lane.id, () => dispatch((device, onDispatch) => device.request(payload, undefined, { signal: disconnected.signal, onDispatch })), disconnected.signal);
+    if (res.destroyed) return;
     return json(res, 200, response);
   } catch (error) {
+    if (error instanceof QueuedWorkCancelledError || res.destroyed) return;
     return json(res, 502, rpcError(payload.id, -32003, error instanceof Error ? error.message : "device bridge failed"));
+  } finally {
+    res.off("close", onResponseClose);
   }
+}
+
+// Node does not observe a Promise returned from an async HTTP listener.
+// In particular, an interrupted upload rejects request-body iteration and
+// would otherwise become an unhandled rejection that terminates the server.
+const server = http.createServer((req, res) => {
+  void handleRequest(req, res).catch(error => {
+    try {
+      console.error(JSON.stringify({
+        status: "http-request-failed",
+        error: error instanceof Error ? error.name : "unknown"
+      }));
+      if (req.destroyed || res.destroyed) return;
+      if (res.headersSent) return res.destroy();
+      json(res, 500, { error: "request failed" });
+    } catch {
+      // A failed error response must not create a second rejected Promise.
+      res.destroy();
+    }
+  });
 });
 
 const wss = new WebSocketServer({ noServer: true, maxPayload: 2_000_000 });

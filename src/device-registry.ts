@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type WebSocket from "ws";
 import type { DeviceRequest, DeviceResponse, JsonRpc } from "./protocol.js";
-import { LanePool } from "./lanes.js";
+import { LanePool, QueuedWorkCancelledError } from "./lanes.js";
+
+// onDispatch marks the attempt to hand a message to the WebSocket, not
+// downstream acknowledgement or completed workstation execution.
+export type DispatchOptions = { signal?: AbortSignal; onDispatch?: () => void };
 
 export class DeviceEffectError extends Error {
   constructor(message: string, readonly disposition: "FAILED" | "OUTCOME_UNKNOWN") { super(message); this.name = "DeviceEffectError"; }
@@ -34,16 +38,19 @@ export class DeviceConnection {
     p.resolve(message.payload);
   }
 
-  notify(payload: JsonRpc): Promise<void> {
+  notify(payload: JsonRpc, options?: DispatchOptions): Promise<void> {
     return this.execution.run(() => new Promise<void>((resolve, reject) => {
+      if (options?.signal?.aborted) return reject(new QueuedWorkCancelledError());
       if (this.socket.readyState !== this.socket.OPEN) return reject(new DeviceEffectError("device socket is not open", "FAILED"));
       const wire: DeviceRequest = { type: "request", requestId: randomUUID(), payload };
+      options?.onDispatch?.();
       this.socket.send(JSON.stringify(wire), err => err ? reject(new DeviceEffectError(err.message, "OUTCOME_UNKNOWN")) : resolve());
-    }));
+    }), options?.signal);
   }
 
-  request(payload: JsonRpc, timeoutMs = 120_000): Promise<JsonRpc> {
+  request(payload: JsonRpc, timeoutMs = 120_000, options?: DispatchOptions): Promise<JsonRpc> {
     return this.execution.run(() => new Promise<JsonRpc>((resolve, reject) => {
+      if (options?.signal?.aborted) return reject(new QueuedWorkCancelledError());
       if (this.socket.readyState !== this.socket.OPEN) return reject(new DeviceEffectError("device socket is not open", "FAILED"));
       const requestId = randomUUID();
       const timer = setTimeout(() => {
@@ -52,13 +59,14 @@ export class DeviceConnection {
       }, timeoutMs);
       this.pending.set(requestId, { resolve, reject, timer });
       const wire: DeviceRequest = { type: "request", requestId, payload };
+      options?.onDispatch?.();
       this.socket.send(JSON.stringify(wire), err => {
         if (!err) return;
         clearTimeout(timer);
         this.pending.delete(requestId);
         reject(new DeviceEffectError(err.message, "OUTCOME_UNKNOWN"));
       });
-    }));
+    }), options?.signal);
   }
 
   get activeCount() { return this.execution.activeCount; }
@@ -101,11 +109,14 @@ export class DeviceRegistry {
   get(id: string) { return this.devices.get(id); }
   resolve(id: string) {
     const device = this.devices.get(id);
-    if (!device) return undefined;
+    // The client can complete its close handshake before the server's detach
+    // callback runs. A closing socket is not an available workstation.
+    if (!device || device.socket.readyState !== device.socket.OPEN) return undefined;
     return { device, generation: this.generations.get(id) ?? 0 };
   }
   getIfGeneration(id: string, generation: number) {
-    return this.generations.get(id) === generation ? this.devices.get(id) : undefined;
+    const device = this.generations.get(id) === generation ? this.devices.get(id) : undefined;
+    return device?.socket.readyState === device?.socket.OPEN ? device : undefined;
   }
   describe(id: string): DeviceAttachment | undefined {
     const device = this.devices.get(id);
