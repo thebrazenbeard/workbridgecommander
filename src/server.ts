@@ -62,7 +62,7 @@ function localInitializeResponse(payload: JsonRpc, device: DeviceConnection): Js
   };
 }
 
-const server = http.createServer(async (req, res) => {
+async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
   if (req.method === "GET" && req.url === "/effects") {
     if (!bearerAuthorized(req.headers.authorization, clientToken)) return json(res, 401, { error: "unauthorized" });
     return json(res, 200, { effects: effects.recent() });
@@ -165,6 +165,26 @@ const server = http.createServer(async (req, res) => {
   } catch (error) {
     return json(res, 502, rpcError(payload.id, -32003, error instanceof Error ? error.message : "device bridge failed"));
   }
+}
+
+// Node does not observe a Promise returned from an async HTTP listener.
+// In particular, an interrupted upload rejects request-body iteration and
+// would otherwise become an unhandled rejection that terminates the server.
+const server = http.createServer((req, res) => {
+  void handleRequest(req, res).catch(error => {
+    try {
+      console.error(JSON.stringify({
+        status: "http-request-failed",
+        error: error instanceof Error ? error.name : "unknown"
+      }));
+      if (req.destroyed || res.destroyed) return;
+      if (res.headersSent) return res.destroy();
+      json(res, 500, { error: "request failed" });
+    } catch {
+      // A failed error response must not create a second rejected Promise.
+      res.destroy();
+    }
+  });
 });
 
 const wss = new WebSocketServer({ noServer: true, maxPayload: 2_000_000 });
