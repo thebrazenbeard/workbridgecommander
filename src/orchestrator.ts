@@ -2,8 +2,9 @@ import { randomUUID } from "node:crypto";
 import { LanePool } from "./lanes.js";
 import { ExecutionEventLog } from "./execution-events.js";
 import type { ExecutionEventStore } from "./execution-store.js";
+import { QueuedWorkCancelledError } from "./lanes.js";
 
-export type WorkContextState = "queued" | "running" | "waiting-for-effect" | "completed" | "failed";
+export type WorkContextState = "queued" | "running" | "waiting-for-effect" | "completed" | "failed" | "cancelled";
 
 export type WorkContextRecord = {
   id: string;
@@ -30,9 +31,9 @@ export class WorkContextOrchestrator {
     return record;
   }
 
-  async run<T>(laneId: string, work: () => Promise<T>): Promise<T> {
+  async run<T>(laneId: string, work: () => Promise<T>, signal?: AbortSignal): Promise<T> {
     const lane = this.require(laneId);
-    return this.pool.run(async () => {
+    try { return await this.pool.run(async () => {
       lane.state = "running";
       lane.startedAt = Date.now();
       this.events.append(lane.id, "running", { state: lane.state, effectDevice: lane.effectDevice });
@@ -43,12 +44,21 @@ export class WorkContextOrchestrator {
         this.events.append(lane.id, "completed", { state: lane.state, effectDevice: lane.effectDevice });
         return result;
       } catch (error) {
-        lane.state = "failed";
+        lane.state = error instanceof QueuedWorkCancelledError ? "cancelled" : "failed";
         lane.finishedAt = Date.now();
-        this.events.append(lane.id, "failed", { state: lane.state, effectDevice: lane.effectDevice, error: error instanceof Error ? error.message : String(error) });
+        this.events.append(lane.id, lane.state, { state: lane.state, effectDevice: lane.effectDevice, error: error instanceof Error ? error.message : String(error) });
         throw error;
       }
-    });
+    }, signal); }
+    catch (error) {
+      // A request canceled while waiting for a lane never enters the callback above.
+      if (error instanceof QueuedWorkCancelledError && lane.finishedAt === undefined) {
+        lane.state = "cancelled";
+        lane.finishedAt = Date.now();
+        this.events.append(lane.id, "cancelled", { state: lane.state, effectDevice: lane.effectDevice });
+      }
+      throw error;
+    }
   }
 
   bindEffect(laneId: string, deviceId: string) {

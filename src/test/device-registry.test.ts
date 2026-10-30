@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DeviceConnection, DeviceEffectError } from "../device-registry.js";
+import { DeviceConnection, DeviceEffectError, DeviceRegistry } from "../device-registry.js";
 
 class FakeSocket {
   OPEN = 1;
@@ -12,6 +12,18 @@ class FakeSocket {
   }
   close() {}
 }
+
+test("a closing workstation is unavailable before its detach event", () => {
+  const registry = new DeviceRegistry();
+  const socket = new FakeSocket();
+  const device = new DeviceConnection("fake", socket as any, 1);
+  registry.attach(device);
+  const generation = registry.resolve("fake")?.generation;
+  assert.equal(generation, 1);
+  socket.readyState = 2; // CLOSING, before WebSocket's close event/detach handler.
+  assert.equal(registry.resolve("fake"), undefined);
+  assert.equal(registry.getIfGeneration("fake", generation!), undefined);
+});
 
 test("execution capacity is enforced for one device", async () => {
   const socket = new FakeSocket();
