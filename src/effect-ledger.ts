@@ -1,6 +1,7 @@
 export type EffectDisposition =
   | "QUEUED"
   | "ADMITTED"
+  | "CANCELLED"
   | "DISPATCHED"
   | "COMPLETED"
   | "FAILED"

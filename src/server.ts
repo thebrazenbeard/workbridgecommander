@@ -5,15 +5,16 @@ import { DeviceConnection, DeviceEffectError, DeviceRegistry } from "./device-re
 import { WorkContextOrchestrator } from "./orchestrator.js";
 import type { DeviceHello, DeviceResponse, JsonRpc } from "./protocol.js";
 import { isJsonRpc, isNotification } from "./protocol.js";
-import { capacityConfig, qualificationStatus } from "./config.js";
+import { capacityConfig, listenHost, qualificationStatus } from "./config.js";
 import { isOriginAllowed } from "./security.js";
 import { ResourceKeyGate } from "./resource-gate.js";
 import { JsonlExecutionEventStore } from "./execution-store.js";
 import { EffectLedger } from "./effect-ledger.js";
 import { randomUUID } from "node:crypto";
+import { QueuedWorkCancelledError } from "./lanes.js";
 
 const port = Number(process.env.PORT ?? "8787");
-const host = process.env.HOST ?? "0.0.0.0";
+const host = listenHost();
 const clientToken = process.env.WORKBRIDGE_CLIENT_TOKEN ?? "";
 const deviceToken = process.env.WORKBRIDGE_DEVICE_TOKEN ?? "";
 const defaultDevice = process.env.WORKBRIDGE_DEFAULT_DEVICE ?? "";
@@ -39,8 +40,8 @@ function rpcError(id: JsonRpc["id"], code: number, message: string): JsonRpc {
   return { jsonrpc: "2.0", id: id ?? null, error: { code, message } };
 }
 
-function localInitializeResponse(payload: JsonRpc, device: DeviceConnection): JsonRpc {
-  const downstream = device.initializeResult;
+function localInitializeResponse(payload: JsonRpc, device?: DeviceConnection): JsonRpc {
+  const downstream = device?.initializeResult ?? {};
   const requested = payload.params && typeof payload.params === "object" && !Array.isArray(payload.params)
     ? (payload.params as Record<string, unknown>).protocolVersion
     : undefined;
@@ -49,7 +50,7 @@ function localInitializeResponse(payload: JsonRpc, device: DeviceConnection): Js
     : (typeof requested === "string" ? requested : "2025-06-18");
   const capabilities = downstream.capabilities && typeof downstream.capabilities === "object"
     ? downstream.capabilities
-    : {};
+    : device ? {} : { tools: {} };
   return {
     jsonrpc: "2.0",
     id: payload.id ?? null,
@@ -62,7 +63,7 @@ function localInitializeResponse(payload: JsonRpc, device: DeviceConnection): Js
   };
 }
 
-const server = http.createServer(async (req, res) => {
+async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
   if (req.method === "GET" && req.url === "/effects") {
     if (!bearerAuthorized(req.headers.authorization, clientToken)) return json(res, 401, { error: "unauthorized" });
     return json(res, 200, { effects: effects.recent() });
@@ -108,13 +109,10 @@ const server = http.createServer(async (req, res) => {
   const requested = req.headers["x-workbridge-device"];
   const deviceId = (Array.isArray(requested) ? requested[0] : requested) || defaultDevice || registry.list()[0];
   if (deviceId && (deviceId.length > 128 || !/^[A-Za-z0-9._:-]+$/.test(deviceId))) return json(res, 400, rpcError(payload.id, -32602, "invalid workstation id"));
-  if (!deviceId) return json(res, 503, rpcError(payload.id, -32001, "no workstation connected"));
-  const resolved = registry.resolve(deviceId);
-  if (!resolved) return json(res, 404, rpcError(payload.id, -32002, "requested workstation is not connected"));
-  const { device, generation } = resolved;
+  const resolved = deviceId ? registry.resolve(deviceId) : undefined;
 
   if (payload.method === "initialize" && payload.id !== undefined) {
-    return json(res, 200, localInitializeResponse(payload, device));
+    return json(res, 200, localInitializeResponse(payload, resolved?.device));
   }
   if (payload.method === "notifications/initialized" && payload.id === undefined) {
     res.writeHead(202, { "cache-control": "no-store" });
@@ -123,6 +121,26 @@ const server = http.createServer(async (req, res) => {
   if (payload.method === "ping" && payload.id !== undefined) {
     return json(res, 200, { jsonrpc: "2.0", id: payload.id ?? null, result: {} });
   }
+
+  // MCP discovery must remain a valid read-only response during workstation
+  // disconnects. An empty list describes the *currently* available tools;
+  // workstation methods still fail closed until an authenticated device joins.
+  if (payload.method === "tools/list" && payload.id !== undefined && !resolved && !requested) {
+    return json(res, 200, { jsonrpc: "2.0", id: payload.id, result: { tools: [] } });
+  }
+
+  if (!deviceId) return json(res, 503, rpcError(payload.id, -32001, "no workstation connected"));
+  if (!resolved) return json(res, 404, rpcError(payload.id, -32002, "requested workstation is not connected"));
+  const { device, generation } = resolved;
+
+  // IncomingMessage can close normally when its body is fully read. The
+  // response closing before completion is the post-upload disconnect signal.
+  const disconnected = new AbortController();
+  const onResponseClose = () => {
+    if (!res.writableEnded) disconnected.abort();
+  };
+  res.on("close", onResponseClose);
+  if (res.destroyed) disconnected.abort();
 
   try {
     const parentHeader = req.headers["x-workbridge-parent-execution"];
@@ -135,36 +153,69 @@ const server = http.createServer(async (req, res) => {
     logic.bindEffect(lane.id, deviceId);
     const effectId = randomUUID();
     effects.create(effectId, deviceId, generation, false);
-    const dispatch = <T>(work: (device: DeviceConnection) => Promise<T>) => {
+    const markCancelledBeforeSend = () => {
+      const state = effects.get(effectId)?.disposition;
+      if (state === "QUEUED" || state === "ADMITTED") effects.transition(effectId, "CANCELLED");
+    };
+    disconnected.signal.addEventListener("abort", markCancelledBeforeSend, { once: true });
+    if (disconnected.signal.aborted) markCancelledBeforeSend();
+    const dispatch = <T>(work: (device: DeviceConnection, onDispatch: () => void) => Promise<T>) => {
+      if (disconnected.signal.aborted) throw new QueuedWorkCancelledError();
       effects.transition(effectId, "ADMITTED");
       const execute = async () => {
+        if (disconnected.signal.aborted) throw new QueuedWorkCancelledError();
         const current = registry.getIfGeneration(deviceId, generation);
         if (!current) {
           effects.transition(effectId, "FAILED");
           throw new Error("workstation connection changed before effect dispatch");
         }
-        effects.transition(effectId, "DISPATCHED");
         try {
-          const value = await work(current);
+          const value = await work(current, () => effects.transition(effectId, "DISPATCHED"));
           effects.transition(effectId, "COMPLETED");
           return value;
         } catch (error) {
-          effects.transition(effectId, error instanceof DeviceEffectError && error.disposition === "OUTCOME_UNKNOWN" ? "OUTCOME_UNKNOWN" : "FAILED");
+          effects.transition(effectId, error instanceof QueuedWorkCancelledError ? "CANCELLED"
+            : error instanceof DeviceEffectError && error.disposition === "OUTCOME_UNKNOWN" ? "OUTCOME_UNKNOWN" : "FAILED");
           throw error;
         }
       };
-      return resourceKey ? resourceGate.run(resourceKey, execute) : execute();
+      return resourceKey ? resourceGate.run(resourceKey, execute, disconnected.signal) : execute();
     };
     if (isNotification(payload)) {
-      await logic.run(lane.id, () => dispatch(device => device.notify(payload)));
+      await logic.run(lane.id, () => dispatch((device, onDispatch) => device.notify(payload, { signal: disconnected.signal, onDispatch })), disconnected.signal);
+      if (res.destroyed) return;
       res.writeHead(202, { "cache-control": "no-store" });
       return res.end();
     }
-    const response = await logic.run(lane.id, () => dispatch(device => device.request(payload)));
+    const response = await logic.run(lane.id, () => dispatch((device, onDispatch) => device.request(payload, undefined, { signal: disconnected.signal, onDispatch })), disconnected.signal);
+    if (res.destroyed) return;
     return json(res, 200, response);
   } catch (error) {
+    if (error instanceof QueuedWorkCancelledError || res.destroyed) return;
     return json(res, 502, rpcError(payload.id, -32003, error instanceof Error ? error.message : "device bridge failed"));
+  } finally {
+    res.off("close", onResponseClose);
   }
+}
+
+// Node does not observe a Promise returned from an async HTTP listener.
+// In particular, an interrupted upload rejects request-body iteration and
+// would otherwise become an unhandled rejection that terminates the server.
+const server = http.createServer((req, res) => {
+  void handleRequest(req, res).catch(error => {
+    try {
+      console.error(JSON.stringify({
+        status: "http-request-failed",
+        error: error instanceof Error ? error.name : "unknown"
+      }));
+      if (req.destroyed || res.destroyed) return;
+      if (res.headersSent) return res.destroy();
+      json(res, 500, { error: "request failed" });
+    } catch {
+      // A failed error response must not create a second rejected Promise.
+      res.destroy();
+    }
+  });
 });
 
 const wss = new WebSocketServer({ noServer: true, maxPayload: 2_000_000 });
