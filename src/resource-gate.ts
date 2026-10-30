@@ -1,19 +1,22 @@
+import { LanePool } from "./lanes.js";
+
 export class ResourceKeyGate {
-  private readonly tails = new Map<string, Promise<void>>();
+  private readonly pools = new Map<string, LanePool>();
 
-  async run<T>(key: string, work: () => Promise<T>): Promise<T> {
-    const prior = this.tails.get(key) ?? Promise.resolve();
-    let release!: () => void;
-    const mine = new Promise<void>(r => { release = r; });
-    const tail = prior.catch(() => {}).then(() => mine);
-    this.tails.set(key, tail);
-
-    await prior.catch(() => {});
+  async run<T>(key: string, work: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+    let pool = this.pools.get(key);
+    if (!pool) {
+      pool = new LanePool(1);
+      this.pools.set(key, pool);
+    }
     try {
-      return await work();
+      return await pool.run(work, signal);
     } finally {
-      release();
-      if (this.tails.get(key) === tail) this.tails.delete(key);
+      // Aborted waiters leave the queue immediately; released keys need not
+      // retain a chain of pending promises after clients have disconnected.
+      if (pool.activeCount === 0 && pool.queuedCount === 0 && this.pools.get(key) === pool) {
+        this.pools.delete(key);
+      }
     }
   }
 }

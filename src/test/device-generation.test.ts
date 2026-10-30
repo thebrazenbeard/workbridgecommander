@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { DeviceConnection, DeviceRegistry } from "../device-registry.js";
 
-class FakeSocket { closeCalls: unknown[][]=[]; send(_d:string, cb?: (e?:Error)=>void){cb?.();} close(...a:unknown[]){this.closeCalls.push(a);} }
+class FakeSocket { OPEN=1; readyState=1; closeCalls: unknown[][]=[]; send(_d:string, cb?: (e?:Error)=>void){cb?.();} close(...a:unknown[]){this.closeCalls.push(a);} }
 
 test("replacement increments device generation and stale generation cannot be resolved", () => {
   const registry = new DeviceRegistry();
