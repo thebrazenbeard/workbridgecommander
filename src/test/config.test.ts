@@ -1,6 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { capacityConfig, qualificationStatus } from "../config.js";
+import { capacityConfig, listenHost, qualificationStatus } from "../config.js";
+
+test("workstation-control listener defaults to loopback and requires explicit remote opt-in", () => {
+  assert.equal(listenHost({}), "127.0.0.1");
+  assert.equal(listenHost({ HOST: "" }), "127.0.0.1");
+  assert.equal(listenHost({ HOST: "127.0.0.1" }), "127.0.0.1");
+  assert.equal(listenHost({ HOST: "0.0.0.0" }), "0.0.0.0");
+});
 
 test("4/32 are default qualification floors, not architectural ceilings", () => {
   const defaults = capacityConfig({});
